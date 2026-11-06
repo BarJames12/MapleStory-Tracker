@@ -1,0 +1,3655 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>My Grind Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --sky1: #1b0a3d;
+        --sky2: #3b1560;
+        --sky3: #8a3a45;
+        --sky4: #c4602f;
+        --cream: #fff7e8;
+        --cream2: #f6ead2;
+        --card-line: #e2cfa8;
+        --ink: #2b1a12;
+        --mut: #7d6552;
+        --plum: #4b1d7c;
+        --plum2: #62309a;
+        --green: #82c91e;
+        --gain: #1f8a4c;
+        --bad: #c2273d;
+        --yellow: #d9a21b;
+        --blue: #2f6fe0;
+        --orange: #f08a24;
+        --pink: #d6457a;
+        --violet: #7a4fd6;
+        --gold: #ffc857;
+        --maple: #ff6b3d;
+        --line: #e2cfa8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      html {
+        background: #8ccfff linear-gradient(180deg, #58b4ff 0%, #82ccff 40%, #b4e2ff 75%, #d3efff 100%) fixed;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        position: relative;
+        color: var(--ink);
+        font:
+          15px/1.45 "Fredoka",
+          "Trebuchet MS",
+          "Segoe UI",
+          sans-serif;
+      }
+      /* sky: soft white clouds that sit behind the cards */
+      .sky {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        z-index: -1;
+        pointer-events: none;
+      }
+      .cloud {
+        position: absolute;
+        width: var(--w);
+        height: calc(var(--w) * 0.3);
+        background: #fff;
+        border-radius: 999px;
+        opacity: 0.96;
+      }
+      .cloud::before,
+      .cloud::after {
+        content: "";
+        position: absolute;
+        background: #fff;
+        border-radius: 50%;
+        aspect-ratio: 1;
+      }
+      .cloud::before {
+        width: 36%;
+        left: 16%;
+        bottom: 35%;
+      }
+      .cloud::after {
+        width: 46%;
+        left: 40%;
+        bottom: 30%;
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: auto;
+        padding: 18px 20px 60px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #fff;
+      }
+      .leaf {
+        font-size: 34px;
+        filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+      }
+      h1 {
+        margin: 0;
+        font:
+          700 28px/1 "Fredoka",
+          sans-serif;
+        color: #fff;
+        text-shadow: 0 3px 0 rgba(15, 60, 130, 0.5);
+        letter-spacing: 0.3px;
+      }
+      .brand p {
+        margin: 3px 0 0;
+        font-size: 13px;
+        color: #fff;
+        text-shadow: 0 1px 0 rgba(10, 50, 110, 0.45);
+      }
+
+      .statusrow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin: 22px 0 14px;
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+        font:
+          700 34px/1 "Fredoka",
+          sans-serif;
+        text-shadow: 0 3px 0 rgba(15, 60, 130, 0.5);
+      }
+      .status #elapsed {
+        font-variant-numeric: tabular-nums;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #7f95b0;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55);
+      }
+      .dot.live {
+        background: #4ade5a;
+        box-shadow: 0 0 0 3px rgba(74, 222, 90, 0.3);
+      }
+      .dot.paused {
+        background: var(--yellow);
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        font:
+          600 15px "Fredoka",
+          sans-serif;
+        color: var(--ink);
+        background: var(--cream2);
+        border: 2px solid var(--card-line);
+        border-radius: 999px;
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.06);
+      }
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid var(--gold);
+        outline-offset: 2px;
+      }
+      button.pill {
+        color: #fff;
+        border: 2px solid rgba(0, 0, 0, 0.28);
+        padding: 10px 22px;
+        font-size: 16px;
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+      }
+      button.pill:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+      }
+      .pill.yellow {
+        background: var(--yellow);
+      }
+      .pill.green {
+        background: #2f9e2f;
+      }
+      .pill.red {
+        background: #d0443a;
+      }
+      .pill.blue {
+        background: var(--blue);
+      }
+      .pill.ghost {
+        background: rgba(255, 255, 255, 0.7);
+        color: #7a3b1d;
+        border-color: #b8743f;
+        text-shadow: none;
+      }
+      button.small {
+        padding: 5px 12px;
+        font-size: 13px;
+      }
+
+      input {
+        font:
+          500 15px "Fredoka",
+          sans-serif;
+        color: var(--ink);
+        background: #fffdf7;
+        border: 2px solid var(--card-line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        width: 100%;
+      }
+      input[type="radio"] {
+        width: auto;
+        accent-color: var(--plum2);
+      }
+
+      .notice {
+        background: var(--cream);
+        border: 3px solid #d9b46a;
+        border-radius: 14px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        font-size: 15px;
+      }
+      #ocrState {
+        color: var(--ink);
+      }
+      #log {
+        color: var(--mut);
+        font-size: 13px;
+      }
+      .ok {
+        color: var(--gain);
+      }
+      .warn {
+        color: var(--bad);
+      }
+      .mut {
+        color: var(--mut);
+        font-size: 13px;
+      }
+
+      .info {
+        display: grid;
+        grid-template-columns: 1.6fr 0.8fr 1.2fr 0.9fr;
+        background: var(--cream);
+        border: 3px solid #d9b46a;
+        border-radius: 14px;
+        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        margin-bottom: 16px;
+      }
+      .info > div {
+        padding: 12px 16px;
+        border-right: 2px solid var(--card-line);
+      }
+      .info > div:last-child {
+        border-right: 0;
+      }
+      .cap {
+        display: block;
+        font:
+          600 12px "Fredoka",
+          sans-serif;
+        letter-spacing: 0.9px;
+        text-transform: uppercase;
+        color: var(--mut);
+        margin-bottom: 6px;
+      }
+      @media (max-width: 760px) {
+        .info {
+          grid-template-columns: 1fr;
+        }
+        .info > div {
+          border-right: 0;
+          border-bottom: 2px solid var(--card-line);
+        }
+      }
+
+      .combo {
+        position: relative;
+      }
+      .combo input {
+        padding-right: 40px;
+      }
+      .combo-btn {
+        position: absolute;
+        right: 4px;
+        top: 4px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 8px;
+        font-size: 15px;
+        line-height: 1;
+        background: var(--cream2);
+      }
+      .combo-list {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 6px);
+        max-height: 340px;
+        overflow: auto;
+        background: var(--cream);
+        border: 3px solid #d9b46a;
+        border-radius: 12px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+        z-index: 50;
+        min-width: min(380px, calc(100vw - 40px));
+      }
+      .combo-list .grp {
+        position: sticky;
+        top: 0;
+        background: linear-gradient(var(--plum2), var(--plum));
+        color: #fff;
+        font:
+          600 12px "Fredoka",
+          sans-serif;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        padding: 5px 12px;
+      }
+      .opt {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--card-line);
+      }
+      .opt .on {
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .opt .os {
+        grid-column: 1;
+        font-size: 12px;
+        color: var(--mut);
+      }
+      .opt .ol {
+        grid-row: 1 / span 2;
+        grid-column: 2;
+        align-self: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--plum);
+        background: #efe1ff;
+        border-radius: 999px;
+        padding: 2px 9px;
+      }
+      .opt.act {
+        background: #f6e3b8;
+      }
+      .opt.sel .on::after {
+        content: "  \2713";
+        color: var(--gain);
+      }
+      .combo-empty {
+        padding: 14px 12px;
+        color: var(--mut);
+        font-size: 14px;
+      }
+      select {
+        font:
+          500 15px "Fredoka",
+          sans-serif;
+        color: var(--ink);
+        background: #fffdf7;
+        border: 2px solid var(--card-line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        flex: 0 1 150px;
+      }
+      .dsum {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .dsum > div {
+        background: #fffdf7;
+        border: 2px solid var(--card-line);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+      .dsum .n {
+        font:
+          700 24px "Fredoka",
+          sans-serif;
+        line-height: 1.2;
+      }
+      .dsum .t {
+        font:
+          600 12px "Fredoka",
+          sans-serif;
+        color: var(--mut);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      canvas.chart {
+        width: 100%;
+        height: 210px;
+        display: block;
+        background: #fffdf7;
+        border: 2px solid var(--card-line);
+        border-radius: 10px;
+        margin: 8px 0;
+      }
+      .dlist {
+        font-size: 14px;
+        margin: 6px 0;
+      }
+      .dlist > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 4px 0;
+        border-bottom: 1px dashed var(--card-line);
+      }
+      .bar {
+        height: 10px;
+        border-radius: 6px;
+        background: #7bc96f;
+        margin-top: 3px;
+      }
+      .panel {
+        background: var(--cream);
+        border: 3px solid #d9b46a;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        margin-bottom: 16px;
+      }
+      .panel > h2 {
+        margin: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(var(--plum2), var(--plum));
+        color: #fff;
+        font:
+          700 15px "Fredoka",
+          sans-serif;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 10px 16px;
+      }
+      .panel > h2 small {
+        font:
+          500 13px "Fredoka",
+          sans-serif;
+        letter-spacing: 0;
+        text-transform: none;
+        color: #e5d6ff;
+      }
+      .body {
+        padding: 16px;
+      }
+
+      .gauge {
+        height: 32px;
+        border-radius: 9px;
+        background: #555162;
+        border: 3px solid #2e2a38;
+        overflow: hidden;
+        position: relative;
+      }
+      .gauge i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0;
+        background: linear-gradient(#a6dd2d, #78bd16);
+        transition: width 0.6s;
+      }
+      .gauge b {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font:
+          600 15px "Fredoka",
+          sans-serif;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 900px) {
+        .cards {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 560px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--cream);
+        border: 3px solid #d9b46a;
+        border-top: 5px solid var(--c, var(--green));
+        border-radius: 14px;
+        padding: 14px 16px 14px;
+        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        min-height: 118px;
+      }
+      .card .lab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font:
+          600 13px "Fredoka",
+          sans-serif;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #4a3a2e;
+      }
+      .card .val {
+        font:
+          700 38px/1.1 "Fredoka",
+          sans-serif;
+        color: var(--ink);
+        margin: 10px 0 2px;
+        font-variant-numeric: tabular-nums;
+        word-break: break-word;
+      }
+      .card .val small {
+        font:
+          500 16px "Fredoka",
+          sans-serif;
+        color: var(--mut);
+      }
+      .card .sub {
+        font-size: 13px;
+        color: var(--mut);
+      }
+      .c-exp {
+        --c: #6cc424;
+      }
+      .c-mesos {
+        --c: var(--orange);
+      }
+      .c-level {
+        --c: var(--violet);
+      }
+      .c-gain {
+        --c: #2fa6a0;
+      }
+      .c-net {
+        --c: var(--pink);
+      }
+      .c-now {
+        --c: var(--blue);
+      }
+
+      .cols {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .cols {
+          grid-template-columns: 1fr;
+        }
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin: 8px 0;
+      }
+      .row > label {
+        flex: 1 1 140px;
+      }
+      .row > input:not([type="radio"]) {
+        flex: 1 1 200px;
+        width: auto;
+        min-width: 0;
+      }
+      .stage {
+        position: relative;
+        background: #0d0a18;
+        border-radius: 10px;
+        border: 3px solid #1a1030;
+        overflow: hidden;
+        min-height: 120px;
+      }
+      canvas#view {
+        width: 100%;
+        display: block;
+        cursor: crosshair;
+      }
+      .empty {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: #cbbbe8;
+        text-align: center;
+        padding: 16px;
+        pointer-events: none;
+      }
+      #roi,
+      #roi2 {
+        display: block;
+        margin-top: 8px;
+        max-width: 100%;
+        image-rendering: pixelated;
+        border: 2px solid var(--card-line);
+        border-radius: 6px;
+        background: #fff;
+      }
+      #steps {
+        list-style: none;
+        margin: 8px 0 10px;
+        padding: 0;
+        font-size: 14px;
+      }
+      #steps li {
+        padding: 1px 0;
+      }
+      #steps li.mut {
+        font-size: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 8px;
+        border-bottom: 2px solid var(--card-line);
+      }
+      th {
+        color: var(--mut);
+        font-weight: 600;
+        font-size: 12px;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true">
+      <i class="cloud" style="--w: 230px; left: -60px; top: 70px"></i>
+      <i class="cloud" style="--w: 170px; left: 20px; top: 300px; opacity: 0.9"></i>
+      <i class="cloud" style="--w: 260px; right: -80px; top: 380px"></i>
+      <i class="cloud" style="--w: 190px; right: 30px; top: 40px; opacity: 0.9"></i>
+      <i class="cloud" style="--w: 210px; left: -70px; top: 640px"></i>
+      <i class="cloud" style="--w: 240px; right: -60px; top: 860px; opacity: 0.9"></i>
+    </div>
+    <div class="wrap">
+      <header class="brand">
+        <span class="leaf" aria-hidden="true">🍁</span>
+        <div>
+          <h1>My Grind Tracker</h1>
+          <p>MapleStory Classic · your grinding stats, private to this PC</p>
+        </div>
+      </header>
+
+      <div class="statusrow">
+        <div class="status">
+          <span class="dot" id="dot"></span><span id="stateWord">Ready</span> <span id="elapsed">0:00:00</span>
+        </div>
+        <div class="actions">
+          <button id="start" class="pill yellow">Start</button>
+          <button id="stop" class="pill red" title="Stop the session and save it">Stop &amp; save</button>
+          <button id="save" class="pill green">Save session</button>
+          <button id="reset" class="pill ghost">Discard</button>
+          <button id="popOut" class="pill ghost" title="A small window that stays on top of the game">
+            &#x2197; Pop out
+          </button>
+        </div>
+      </div>
+
+      <div class="notice">
+        <span id="ocrState">Reader idle. Share your game window below to begin.</span> <span id="log"></span>
+      </div>
+
+      <div class="info">
+        <div>
+          <span class="cap">Spot</span>
+          <div class="combo">
+            <input
+              id="mapName"
+              placeholder="Search a map, like Ant Tunnel"
+              autocomplete="off"
+              role="combobox"
+              aria-expanded="false"
+              aria-controls="mapList"
+              aria-autocomplete="list"
+              aria-label="Map or spot name"
+            />
+            <button type="button" id="mapToggle" class="combo-btn" aria-label="Show all maps">&#9662;</button>
+            <div class="combo-list" id="mapList" role="listbox" hidden></div>
+          </div>
+          <div class="mut" id="mapAuto" style="margin-top: 4px"></div>
+        </div>
+        <div>
+          <span class="cap">Your level (optional)</span
+          ><input id="lvl" inputmode="numeric" placeholder="like 25" aria-label="Your level" />
+          <div class="mut" style="margin-top: 4px">Goes up by itself when you level up</div>
+        </div>
+        <div>
+          <span class="cap">EXP needed for this level (optional)</span
+          ><input id="req" inputmode="numeric" placeholder="like 25000000" aria-label="EXP needed for this level" />
+        </div>
+        <div>
+          <span class="cap">Last reading</span>
+          <div
+            style="
+              font:
+                700 22px &quot;Fredoka&quot;,
+                sans-serif;
+            "
+          >
+            <span id="lastRead">--</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>Your EXP <small>reading every 1.5 seconds</small></h2>
+        <div class="body">
+          <div class="gauge"><i id="gfill"></i><b id="gtext">--</b></div>
+        </div>
+      </section>
+
+      <div class="cards">
+        <div class="card c-exp">
+          <div class="lab">⚡ EXP / hour</div>
+          <div class="val"><span id="rate">--</span> <small id="rateUnit">% / hour</small></div>
+          <div class="sub">Last 5 minutes: <span id="rate5v">--</span></div>
+          <div class="sub" id="rateLv"></div>
+        </div>
+        <div class="card c-mesos">
+          <div class="lab">🪙 Mesos profit / hour</div>
+          <div class="val"><span id="pRate">--</span></div>
+          <div class="sub">Last 5 min: <span id="pLast5">--</span> / hour</div>
+          <div class="sub" id="pMoney"></div>
+        </div>
+        <div class="card c-level">
+          <div class="lab">⏳ Next level in</div>
+          <div class="val" id="tToLevel">--</div>
+          <div class="sub">at your average rate</div>
+        </div>
+        <div class="card c-gain">
+          <div class="lab">📈 EXP gained</div>
+          <div class="val" id="gained">0%</div>
+          <div class="sub" id="startExp">Started at: --</div>
+          <div class="sub"><span id="lvls">0</span> level-ups · <span id="deaths">0</span> deaths</div>
+        </div>
+        <div class="card c-net">
+          <div class="lab">💰 Net profit</div>
+          <div class="val" id="pNet">--</div>
+          <div class="sub">earned <span id="pIn">0</span> · spent <span id="pOut">0</span></div>
+        </div>
+        <div class="card c-now">
+          <div class="lab">👛 Mesos now</div>
+          <div class="val" id="pNow">--</div>
+          <div class="sub" id="startMesos">Started with: --</div>
+          <div class="sub">manual adds: <span id="pExtra">0</span></div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>Live graph <small>this session</small></h2>
+        <div class="body">
+          <canvas id="liveChart" class="chart" aria-label="EXP per hour and net mesos over this session"></canvas>
+          <div class="mut">
+            <span style="color: #e8742a">&#9632;</span> EXP / hour (last 5 minutes) &nbsp;
+            <span style="color: #2f9e2f">&#9632;</span> net mesos. Fills in after about 30 seconds of tracking.
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Daily summary <small id="dayLabel"></small></h2>
+        <div class="body">
+          <div class="row">
+            <button class="small" id="dayPrev">&#9664; Earlier</button><button class="small" id="dayToday">Today</button
+            ><button class="small" id="dayNext">Later &#9654;</button>
+          </div>
+          <div class="dsum" id="dsum"></div>
+          <div class="mut" style="margin-top: 6px">Spending on this day</div>
+          <div class="dlist" id="dcats"></div>
+          <div class="row">
+            <input
+              id="dayExpAmt"
+              placeholder="Expense outside a session, like 300k"
+              aria-label="Expense amount"
+            /><select id="dayExpCat" aria-label="Expense type"></select
+            ><button id="dayExpBtn">Add to this day</button>
+          </div>
+          <div class="mut" style="margin-top: 6px">Sessions on this day</div>
+          <div class="dlist" id="dsess"></div>
+          <div class="mut" style="margin-top: 6px">Last 14 days: bars are net mesos, the line is EXP gained</div>
+          <canvas id="dayChart" class="chart" aria-label="Net mesos and EXP for the last 14 days"></canvas>
+          <p class="mut" style="margin: 4px 0 0">
+            A day runs from midnight to midnight. Sessions count on the day you saved them. A session you have not saved
+            yet is not included.
+          </p>
+        </div>
+      </section>
+
+      <div class="cols">
+        <section class="panel">
+          <h2>
+            What the tracker sees
+            <small
+              ><button id="share" class="pill blue small" style="padding: 5px 14px">Share game window</button>
+              <button id="stopShare" class="small">Stop</button></small
+            >
+          </h2>
+          <div class="body">
+            <ul id="steps"></ul>
+            <div class="row">
+              <span class="mut">Drag a box for:</span>
+              <label style="flex: 0 0 auto"
+                ><input type="radio" name="target" value="exp" checked /> EXP bar (orange box)</label
+              >
+              <label style="flex: 0 0 auto"
+                ><input type="radio" name="target" value="mesos" /> Mesos number (green box)</label
+              >
+              <button id="clearBox" class="small" title="Remove the box of the selected type">Clear this box</button>
+            </div>
+            <div class="stage">
+              <canvas id="view" width="640" height="360"></canvas>
+              <div class="empty" id="empty">
+                Share your game window, then drag a box around the EXP bar text, like EXP 1,234,567 [45.67%].
+              </div>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center">
+              <button
+                id="findMesos"
+                class="small"
+                title="Open your inventory first. The tracker looks for the word MESOS on the screen and boxes the number next to it."
+              >
+                Find mesos automatically
+              </button>
+              <label style="flex: 0 0 auto"
+                ><input type="checkbox" id="showPrev" /> Show what the reader sees (for fixing problems)</label
+              >
+            </div>
+            <div id="prevWrap" hidden>
+              <div class="mut" style="margin-top: 10px">
+                What the reader sees (should be clear black text on white):
+              </div>
+              <canvas id="roi" width="10" height="10" hidden></canvas>
+              <div class="mut" id="roi2Label" style="margin-top: 8px" hidden>Mesos box, as the reader sees it:</div>
+              <canvas id="roi2" width="10" height="10" hidden></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Mesos and manual entry</h2>
+          <div class="body">
+            <div class="mut" id="pRead"></div>
+            <div class="row">
+              <button id="mRestart" class="small">Restart mesos tracking</button
+              ><span class="mut">Use this if the numbers look wrong.</span>
+            </div>
+            <p class="mut" style="margin: 10px 0 6px">
+              Net = what your mesos grew by, plus what you add by hand. Buying potions lowers it, selling drops raises
+              it. You can type 2.5m or 1b.
+            </p>
+            <div class="row">
+              <input
+                id="mNowIn"
+                placeholder="Mesos right now, like 1,250,000,000"
+                aria-label="Mesos right now"
+              /><button id="mNowBtn">Set</button>
+            </div>
+            <div class="row">
+              <input id="addIn" placeholder="Add item sale or drop value, like 30m" aria-label="Add value" /><button
+                id="addInBtn"
+              >
+                Add
+              </button>
+            </div>
+            <div class="row">
+              <input id="addOut" placeholder="Add expense not seen in mesos, like 5m" aria-label="Add expense" /><select
+                id="outCat"
+                aria-label="Expense type"
+              ></select
+              ><button id="addOutBtn">Add</button>
+            </div>
+            <div class="row">
+              <label
+                ><span class="cap">Real money for 1B mesos (optional)</span
+                ><input id="rmRate" inputmode="decimal" placeholder="like 4.5"
+              /></label>
+              <label style="flex: 0 1 90px"
+                ><span class="cap">Currency</span><input id="rmCur" placeholder="$" maxlength="4"
+              /></label>
+            </div>
+            <div class="cap" style="margin-top: 14px">No capture? Add your EXP % by hand</div>
+            <div class="row">
+              <input
+                id="manual"
+                type="number"
+                step="0.01"
+                min="0"
+                max="99.99"
+                placeholder="EXP % right now, like 45.67"
+                aria-label="EXP percent"
+              /><button id="addManual">Add</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>Saved sessions</h2>
+        <div class="body" style="overflow-x: auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Spot</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Started</th>
+                <th>Gained</th>
+                <th>Per hour</th>
+                <th>Profit / hour</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="hist"></tbody>
+          </table>
+          <p class="mut" id="histEmpty">Nothing saved yet. Finish a grind and press Save session to compare spots.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Best spots <small>from your saved sessions</small></h2>
+        <div class="body">
+          <div id="spots" class="dlist"></div>
+          <p class="mut" id="spotsEmpty">Save a few sessions at different spots to compare them here.</p>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const store = {
+        get(k, d) {
+          try {
+            const v = localStorage.getItem(k);
+            return v ? JSON.parse(v) : d;
+          } catch (e) {
+            return d;
+          }
+        },
+        set(k, v) {
+          try {
+            localStorage.setItem(k, JSON.stringify(v));
+          } catch (e) {}
+        },
+      };
+
+      /* ---------- session state ---------- */
+      let S;
+      function fresh() {
+        return {
+          running: false,
+          startT: 0,
+          acc: 0,
+          last: null,
+          lastAbs: null,
+          startPct: null,
+          startAbs: null,
+          cats: {},
+          samples: [],
+          lastSample: 0,
+          reqEst: null,
+          reqErr: null,
+          prevReq: null,
+          expGain: 0,
+          expOk: true,
+          base: [],
+          rej: 0,
+          rejKey: "",
+          rejSame: 0,
+          noSeed: false,
+          events: [],
+          total: 0,
+          lvls: 0,
+          deaths: 0,
+          cand: null,
+          candN: 0,
+          mStart: null,
+          mNow: null,
+          mIn: 0,
+          mOut: 0,
+          mCand: null,
+          mCandN: 0,
+          mEvents: [],
+          extra: 0,
+          extraIn: 0,
+          extraOut: 0,
+        };
+      }
+      S = fresh();
+      let armed = false; // the session only starts when you press Start
+      const OCR_CONFIRM = 2; // a changed reading must be seen this many times in a row
+
+      function elapsedMs() {
+        return S.acc + (S.running ? Date.now() - S.startT : 0);
+      }
+
+      /* The EXP number (like 103,851) and the percent must agree. That lets us fix a misread percent and measure gains in real EXP, so level-ups do not distort the averages. */
+      function refReq() {
+        // the best idea of how big a level is: the previous level, or the nearest level we learned
+        if (S.prevReq) return { lo: S.prevReq * 0.7, hi: S.prevReq * 2.5 };
+        if (S.noSeed) return null;
+        const t = store.get("reqByLevel", {}),
+          L = parseInt($("lvl").value, 10) || 0,
+          ks = Object.keys(t);
+        if (!ks.length) return null;
+        ks.sort((a, b) => Math.abs(a - L) - Math.abs(b - L));
+        return { lo: t[ks[0]] * 0.5, hi: t[ks[0]] * 2.5 };
+      }
+      function noteReq(pct, abs) {
+        if (!abs || pct < 0.2) return;
+        const ref = refReq(),
+          est0 = (abs / pct) * 100;
+        if (ref ? est0 < ref.lo || est0 > ref.hi : pct >= 10 && pct < 20) return; // implausible (or an unverifiable 10-19%): do not learn from it
+        const err = 0.006 / pct; // the percent is rounded to 2 decimals
+        if (S.reqEst === null || err < S.reqErr) {
+          S.reqEst = (abs / pct) * 100;
+          S.reqErr = err;
+        }
+        const L = parseInt($("lvl").value, 10);
+        if (L && pct >= 20 && !(reqExp() > 0)) {
+          // 20%+ can not be a bracket misread, so it is safe to remember this level's size
+          const t = store.get("reqByLevel", {});
+          t[L] = Math.round((abs / pct) * 100);
+          store.set("reqByLevel", t);
+        }
+      }
+      function levelSize(L) {
+        const t = store.get("reqByLevel", {});
+        return L && t[L] ? t[L] : 0;
+      }
+      function seedReq() {
+        // a known size for this level lets us verify the very first reading
+        if (S.reqEst || S.prevReq || S.noSeed) return;
+        const typed = reqExp(),
+          r = typed || levelSize(parseInt($("lvl").value, 10));
+        if (r > 1000) {
+          S.reqEst = r;
+          S.reqErr = typed ? 0.15 : 0.01;
+        } // a typed number may be a bit off or stale, so allow more slack
+      }
+      function checkPct(pct, abs) {
+        let lo, hi;
+        if (S.reqEst && S.lastAbs && abs < S.lastAbs * 0.9) {
+          lo = (abs / (S.reqEst * 2.2)) * 100 - 0.05;
+          hi = (abs / (S.reqEst * 0.8)) * 100 + 0.05;
+        } // new level: size unknown, allow a range
+        else if (S.reqEst) {
+          const e = (abs / S.reqEst) * 100,
+            tol = e * S.reqErr + 0.06;
+          lo = e - tol;
+          hi = e + tol;
+        } else {
+          const ref = refReq();
+          if (!ref) return pct;
+          lo = (abs / ref.hi) * 100 - 0.05;
+          hi = (abs / ref.lo) * 100 + 0.05;
+        }
+        if (pct >= lo && pct <= hi) return pct;
+        const t = pct.toFixed(2),
+          alts = [];
+        if (t.indexOf(".") > 1) alts.push(parseFloat(t.slice(1))); // "[" misread as a leading 1, like 10.31 for 0.31
+        if (pct + 10 < 100) alts.push(pct + 10);
+        for (const a of alts) if (a >= lo && a <= hi) return a;
+        // look-alike digits (6 read as 8, 0 as 8, 5 as 6, ...): try swapping one or two digits and keep the one that fits the EXP number best
+        const CONF = { 0: "86", 1: "7", 3: "85", 5: "63", 6: "850", 7: "1", 8: "60359", 9: "8" },
+          mid = (lo + hi) / 2;
+        const swap = (str, depth, from) => {
+          let out = [];
+          if (depth === 0) return out;
+          for (let i = from; i < str.length; i++) {
+            const ch = CONF[str[i]];
+            if (!ch) continue;
+            for (const c of ch) {
+              const n = str.slice(0, i) + c + str.slice(i + 1);
+              out.push(parseFloat(n));
+              out = out.concat(swap(n, depth - 1, i + 1));
+            }
+          }
+          return out;
+        };
+        let best = null;
+        for (const a of swap(t, 2, 0))
+          if (a >= 0 && a < 100 && a >= lo && a <= hi && (best === null || Math.abs(a - mid) < Math.abs(best - mid)))
+            best = a;
+        return best;
+      }
+      function feed(pct, manual, abs) {
+        if (!S.running) return;
+        if (!manual && abs) {
+          seedReq();
+          const c = checkPct(pct, abs);
+          if (c === null) {
+            // The same reading again and again is a steady, real reading: our idea of the level size (a saved or typed number) must be the wrong one. Believe the screen.
+            const key = pct + "|" + abs;
+            S.rejSame = S.rejKey === key ? S.rejSame + 1 : 1;
+            S.rejKey = key;
+            if (S.rejSame >= 4 || ++S.rej > 25) {
+              S.reqEst = S.reqErr = S.prevReq = null;
+              S.noSeed = true;
+              S.rej = 0;
+              S.rejSame = 0;
+            } else {
+              S.cand = null;
+              S.candN = 0;
+              return;
+            }
+          } else {
+            S.rej = 0;
+            S.rejSame = 0;
+            pct = c;
+          }
+        }
+        if (S.last === null) {
+          if (!manual) {
+            // the starting point must be right, so take the middle one of the first 3 readings (one bad reading can not become the start)
+            S.base.push({ pct, abs: abs || 0 });
+            if (S.base.length < 3) return;
+            const mid = S.base.slice().sort((a, b) => a.pct - b.pct)[1];
+            S.base = [];
+            pct = mid.pct;
+            abs = mid.abs;
+          }
+          S.last = pct;
+          S.lastAbs = abs || null;
+          S.startPct = pct;
+          S.startAbs = abs || null;
+          S.lvlStart = parseInt($("lvl").value, 10) || null;
+          noteReq(pct, abs);
+          return;
+        }
+        // The game shows the EXP number next to the percent. If the percent moved but the number did not, the percent was misread.
+        if (!manual && abs && S.lastAbs && abs === S.lastAbs && Math.abs(pct - S.last) > 0.05) {
+          S.cand = null;
+          return;
+        }
+        if (Math.abs(pct - S.last) < 0.005) {
+          S.cand = null;
+          if (abs) S.lastAbs = abs;
+          return;
+        }
+        if (!manual) {
+          // guard against misreads
+          const jump = Math.abs(pct - S.last);
+          const need = jump > 5 ? 6 : OCR_CONFIRM; // a big change (level-up, death, misread) must stay on screen for several readings
+          if (S.cand !== null && Math.abs(S.cand - pct) < 0.005) S.candN++;
+          else {
+            S.cand = pct;
+            S.candN = 1;
+          }
+          if (S.candN < need) return;
+        }
+        S.cand = null;
+        S.candN = 0;
+        let gain = 0,
+          lvlUp = false;
+        if (pct > S.last) gain = pct - S.last;
+        else {
+          // A drop is only believed if the EXP number next to the percent dropped too (a misread keeps the number the same or garbled)
+          if (!manual && abs && S.lastAbs && abs >= S.lastAbs) {
+            S.cand = null;
+            S.candN = 0;
+            return;
+          }
+          if (S.last > 70 && pct < 30) {
+            gain = 100 - S.last + pct;
+            S.lvls++;
+            lvlUp = true;
+          } else if (!manual && S.last - pct > 15) {
+            S.cand = null;
+            S.candN = 0;
+            return;
+          } // a real death never costs this much: it is a misread
+          else {
+            S.deaths++;
+          } // EXP dropped without a level-up
+        }
+        let x = 0; // the same gain in real EXP
+        if (gain > 0) {
+          if (abs && S.lastAbs && S.reqEst) x = lvlUp ? S.reqEst - S.lastAbs + abs : abs - S.lastAbs;
+          else if (S.reqEst) x = (gain / 100) * S.reqEst;
+          if (!(x > 0)) {
+            x = 0;
+            S.expOk = false;
+          }
+          S.total += gain;
+          S.expGain += x;
+          S.events.push({ t: Date.now(), g: gain, x });
+        }
+        if (lvlUp) {
+          const L = parseInt($("lvl").value, 10);
+          if (L) {
+            $("lvl").value = L + 1;
+            store.set("lvl", L + 1);
+          }
+        }
+        if (lvlUp) {
+          S.prevReq = S.reqEst;
+          S.reqEst = null;
+          S.reqErr = null;
+          const n = levelSize(parseInt($("lvl").value, 10));
+          if (n > 1000) {
+            S.reqEst = n;
+            S.reqErr = 0.01;
+          }
+        }
+        S.last = pct;
+        if (abs) S.lastAbs = abs;
+        noteReq(pct, abs);
+      }
+
+      /* ---------- mesos / profit ---------- */
+      function feedMesos(v, manual) {
+        if (!S.running) return;
+        if (S.mNow !== null && v === S.mNow) {
+          S.mCand = null;
+          return;
+        }
+        if (!manual) {
+          // a new value must be seen several times in a row
+          // first reading, or a huge jump (over 50%), is probably a misread: demand more proof
+          const need = S.mNow === null ? 4 : S.mNow > 1000 && Math.abs(v - S.mNow) / S.mNow > 0.5 ? 6 : 3;
+          if (S.mCand === v) S.mCandN++;
+          else {
+            S.mCand = v;
+            S.mCandN = 1;
+          }
+          if (S.mCandN < need) return;
+        }
+        S.mCand = null;
+        S.mCandN = 0;
+        if (S.mNow === null) {
+          S.mStart = v;
+          S.mNow = v;
+          return;
+        }
+        if (v > S.mNow) {
+          S.mIn += v - S.mNow;
+          S.mEvents.push({ t: Date.now(), g: v - S.mNow });
+        } else S.mOut += S.mNow - v;
+        S.mNow = v;
+      }
+      function parseAmt(t) {
+        const m = String(t)
+          .trim()
+          .toLowerCase()
+          .replace(/[\s,_]/g, "")
+          .match(/^(\d*\.?\d+)([kmb])?$/);
+        if (!m) return null;
+        return Math.round(parseFloat(m[1]) * ({ k: 1e3, m: 1e6, b: 1e9 }[m[2]] || 1));
+      }
+      const fmtM = (n) => {
+        const a = Math.abs(n),
+          s = n < 0 ? "-" : "";
+        return a >= 1e9
+          ? s + (a / 1e9).toFixed(2) + "B"
+          : a >= 1e6
+            ? s + (a / 1e6).toFixed(2) + "M"
+            : s + Math.round(a).toLocaleString();
+      };
+      const netProfit = () => (S.mNow === null ? 0 : S.mNow - S.mStart) + S.extra;
+      const mesoTracked = () => S.mNow !== null || S.extra !== 0;
+
+      /* ---------- display ---------- */
+      const fmtT = (ms) => {
+        const s = Math.floor(ms / 1000);
+        return (
+          Math.floor(s / 3600) +
+          ":" +
+          String(Math.floor(s / 60) % 60).padStart(2, "0") +
+          ":" +
+          String(s % 60).padStart(2, "0")
+        );
+      };
+      const reqExp = () => parseInt(($("req").value || "").replace(/[^\d]/g, ""), 10) || 0;
+      function perHour(pct, ms) {
+        return ms > 0 ? pct / (ms / 3600000) : 0;
+      }
+      function showRate(p) {
+        const r = reqExp();
+        return r ? Math.round((p / 100) * r).toLocaleString() : p.toFixed(2);
+      }
+
+      /* Smooth numbers: every figure glides to its new value instead of jumping */
+      const tween = {};
+      function setNum(id, tgt, fmt) {
+        const t = tween[id] || (tween[id] = { cur: null, tgt: null, fmt, last: null });
+        t.fmt = fmt;
+        t.tgt = tgt;
+        if (tgt === null || tgt === undefined) {
+          t.tgt = null;
+          t.cur = null;
+          const txt = fmt(null);
+          if (t.last !== txt) {
+            $(id).textContent = txt;
+            t.last = txt;
+          }
+          return;
+        }
+        if (t.cur === null) {
+          t.cur = tgt;
+          const txt = fmt(tgt);
+          $(id).textContent = txt;
+          t.last = txt;
+        }
+      }
+      (function tick() {
+        for (const id in tween) {
+          const t = tween[id];
+          if (t.tgt === null || t.cur === null) continue;
+          const d = t.tgt - t.cur;
+          t.cur = Math.abs(d) <= Math.max(Math.abs(t.tgt) * 0.0003, 1e-7) ? t.tgt : t.cur + d * 0.1;
+          const txt = t.fmt(t.cur);
+          if (t.last !== txt) {
+            $(id).textContent = txt;
+            t.last = txt;
+          }
+        }
+        requestAnimationFrame(tick);
+      })();
+      const fPct = (v) => (v === null ? "--" : v.toFixed(2) + "%");
+      const fMoney = (v) => (v === null ? "--" : fmtM(v));
+      const fRate = (v) => (v === null ? "--" : showRate(v));
+      const fRate5 = (v) => (v === null ? "--" : showRate(v) + (reqExp() ? " EXP/h" : " %/h"));
+      const fTime = (v) => {
+        if (v === null) return "--";
+        const t = Math.round(v / 1000),
+          h = Math.floor(t / 3600),
+          m = Math.floor((t % 3600) / 60),
+          sec = t % 60;
+        return h
+          ? h + "h " + String(m).padStart(2, "0") + "m"
+          : m
+            ? m + "m " + String(sec).padStart(2, "0") + "s"
+            : sec + "s";
+      };
+
+      function normTotal() {
+        return S.expOk && S.expGain > 0 && S.reqEst ? (S.expGain / S.reqEst) * 100 : S.total;
+      } // gains as % of the level you are on now
+      function render() {
+        const ms = elapsedMs();
+        $("elapsed").textContent = fmtT(ms);
+        const norm = S.expOk && S.expGain > 0 && S.reqEst;
+        setNum("gained", normTotal(), fPct);
+        $("startExp").textContent =
+          "Started at: " +
+          (S.startPct === null
+            ? "--"
+            : S.startPct.toFixed(2) + "%" + (S.startAbs ? " (" + S.startAbs.toLocaleString() + " EXP)" : ""));
+        $("startMesos").textContent = "Started with: " + (S.mStart === null ? "--" : S.mStart.toLocaleString());
+        $("lvls").textContent = S.lvls;
+        $("deaths").textContent = S.deaths;
+        $("rateUnit").textContent = reqExp() ? "EXP / hour" : "% / hour";
+        setNum("lastRead", S.last, fPct);
+        const cur = S.last === null ? 0 : S.last;
+        $("gfill").style.width = cur + "%";
+        setNum("gtext", S.last, fPct);
+        if (ms > 20000 && S.total > 0) {
+          const rate = perHour(normTotal(), ms);
+          setNum("rate", rate, fRate);
+          $("rateLv").textContent = reqExp() ? "" : "about " + (rate / 100).toFixed(1) + " levels per hour";
+          const h = (100 - cur) / rate; // rate is already in percent of the CURRENT level
+          setNum("tToLevel", isFinite(h) ? h * 3600000 : null, fTime);
+        } else {
+          setNum("rate", null, fRate);
+          setNum("tToLevel", null, fTime);
+        }
+        const now = Date.now(),
+          win = Math.min(ms, 300000);
+        const g5 = S.events
+          .filter((e) => now - e.t <= 300000)
+          .reduce((a, e) => a + (norm ? (e.x / S.reqEst) * 100 : e.g), 0);
+        const r5 = win > 20000 && g5 > 0 ? perHour(g5, win) : null;
+        setNum("rate5v", r5, fRate5);
+        if (S.running && ms - S.lastSample >= 10000 && ms > 20000) {
+          S.lastSample = ms;
+          S.samples.push({ t: ms, r: r5, n: mesoTracked() ? netProfit() : null });
+          if (S.samples.length > 2000) S.samples.shift();
+        }
+        drawLive();
+
+        /* profit panel */
+        const net = netProfit(),
+          hrs = ms / 3600000;
+        setNum("pNet", mesoTracked() ? net : null, fMoney);
+        setNum("pIn", S.mIn + S.extraIn, fMoney);
+        setNum("pOut", S.mOut + S.extraOut, fMoney);
+        setNum("pNow", S.mNow, fMoney);
+        setNum("pExtra", S.extra, fMoney);
+        const ready = mesoTracked() && ms > 20000;
+        setNum("pRate", ready ? net / hrs : null, fMoney);
+        const m5 = S.mEvents.filter((e) => now - e.t <= 300000).reduce((a, e) => a + e.g, 0);
+        setNum("pLast5", win > 20000 && m5 > 0 ? m5 / (win / 3600000) : null, fMoney);
+        const rmr = parseFloat(($("rmRate").value || "").replace(",", ".")),
+          rmc = $("rmCur").value || "$";
+        $("pMoney").textContent =
+          ready && rmr > 0
+            ? "About " +
+              rmc +
+              ((net / hrs / 1e9) * rmr).toFixed(2) +
+              " per hour, " +
+              rmc +
+              ((net / 1e9) * rmr).toFixed(2) +
+              " so far"
+            : "";
+      }
+      setInterval(render, 1000);
+
+      /* ---------- graphs and daily summary ---------- */
+      const CATS = ["Potions", "Return scrolls", "Other"];
+      ["outCat", "dayExpCat"].forEach((id) =>
+        CATS.forEach((c) => {
+          const o = document.createElement("option");
+          o.textContent = c;
+          $(id).appendChild(o);
+        }),
+      );
+      const COL = { exp: "#e8742a", mesos: "#2f9e2f", bad: "#d0443a", ink: "#2b1a12", mut: "#7d6552", grid: "#eadcb8" };
+      function setupCanvas(c) {
+        const dpr = window.devicePixelRatio || 1,
+          w = c.clientWidth,
+          h = c.clientHeight;
+        if (!w || !h) return null;
+        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+          c.width = Math.round(w * dpr);
+          c.height = Math.round(h * dpr);
+        }
+        const x = c.getContext("2d");
+        x.setTransform(dpr, 0, 0, dpr, 0, 0);
+        x.clearRect(0, 0, w, h);
+        x.font = "12px Fredoka, sans-serif";
+        return { x, w, h };
+      }
+      function note(g, text) {
+        g.x.fillStyle = COL.mut;
+        g.x.textAlign = "center";
+        g.x.fillText(text, g.w / 2, g.h / 2);
+      }
+      function drawLive() {
+        const c = $("liveChart"),
+          g = setupCanvas(c);
+        if (!g) return;
+        const sm = S.samples,
+          { x, w, h } = g;
+        if (sm.length < 2) {
+          note(g, "Waiting for data...");
+          return;
+        }
+        const L = 52,
+          R = 62,
+          T = 14,
+          B = 24,
+          pw = w - L - R,
+          ph = h - T - B,
+          tMax = sm[sm.length - 1].t,
+          tMin = sm[0].t;
+        const rs = sm.filter((p) => p.r !== null).map((p) => p.r),
+          ns = sm.filter((p) => p.n !== null).map((p) => p.n);
+        const rMax = Math.max(1, ...rs) * 1.1,
+          nMax = Math.max(0, ...ns),
+          nMin = Math.min(0, ...ns),
+          nSpan = nMax - nMin || 1;
+        const X = (t) => L + (tMax === tMin ? 0 : (t - tMin) / (tMax - tMin)) * pw;
+        x.strokeStyle = COL.grid;
+        x.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+          const y = T + (ph * i) / 4;
+          x.beginPath();
+          x.moveTo(L, y);
+          x.lineTo(L + pw, y);
+          x.stroke();
+        }
+        x.fillStyle = COL.exp;
+        x.textAlign = "right";
+        x.fillText(showRate(rMax), L - 6, T + 4);
+        x.fillText("0", L - 6, T + ph + 4);
+        x.fillStyle = COL.mesos;
+        x.textAlign = "left";
+        x.fillText(fmtM(nMax), L + pw + 6, T + 4);
+        x.fillText(fmtM(nMin), L + pw + 6, T + ph + 4);
+        x.fillStyle = COL.mut;
+        x.textAlign = "center";
+        x.fillText(fmtT(tMin), L, h - 6);
+        x.fillText(fmtT(tMax), L + pw, h - 6);
+        const line = (vals, col, Y) => {
+          x.strokeStyle = col;
+          x.lineWidth = 2.5;
+          x.lineJoin = "round";
+          x.beginPath();
+          let on = false;
+          sm.forEach((p, i) => {
+            const v = vals(p);
+            if (v === null) {
+              on = false;
+              return;
+            }
+            const px = X(p.t),
+              py = Y(v);
+            if (on) x.lineTo(px, py);
+            else {
+              x.moveTo(px, py);
+              on = true;
+            }
+          });
+          x.stroke();
+        };
+        line(
+          (p) => p.r,
+          COL.exp,
+          (v) => T + ph - (v / rMax) * ph,
+        );
+        line(
+          (p) => p.n,
+          COL.mesos,
+          (v) => T + ph - ((v - nMin) / nSpan) * ph,
+        );
+      }
+      const dayKey = (ts) => {
+        const d = new Date(ts);
+        return (
+          d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
+        );
+      };
+      let viewDay = dayKey(Date.now());
+      const shiftDay = (k, n) => {
+        const [y, m, d] = k.split("-").map(Number);
+        return dayKey(new Date(y, m - 1, d + n).getTime());
+      };
+      function dayData(k) {
+        const ss = store.get("sessions", []).filter((s) => dayKey(s.date) === k),
+          outs = store.get("dayExp", []).filter((e) => dayKey(e.t) === k);
+        const D = { n: ss.length, ms: 0, exp: 0, expN: 0, lvls: 0, net: 0, earned: 0, spent: 0, auto: 0, cats: {}, ss };
+        ss.forEach((s) => {
+          D.ms += s.ms;
+          D.lvls += s.lvls || 0;
+          D.net += s.profit || 0;
+          if (s.expGain != null) {
+            D.exp += s.expGain;
+            D.expN++;
+          }
+          D.earned += s.mEarned || 0;
+          D.spent += s.mSpent || 0;
+          D.auto += s.mOutAuto || 0;
+          Object.keys(s.cats || {}).forEach((c) => (D.cats[c] = (D.cats[c] || 0) + s.cats[c]));
+        });
+        outs.forEach((e) => {
+          D.net -= e.amt;
+          D.spent += e.amt;
+          D.cats[e.cat] = (D.cats[e.cat] || 0) + e.amt;
+        });
+        return D;
+      }
+      function drawDaily() {
+        const k = viewDay,
+          D = dayData(k),
+          today = dayKey(Date.now());
+        $("dayLabel").textContent = k === today ? "Today, " + k : k;
+        $("dayNext").disabled = k >= today;
+        const box = (t, n, sub) => {
+          const d = document.createElement("div"),
+            a = document.createElement("div"),
+            b = document.createElement("div"),
+            c = document.createElement("div");
+          a.className = "t";
+          a.textContent = t;
+          b.className = "n";
+          b.textContent = n;
+          c.className = "mut";
+          c.textContent = sub || "";
+          d.append(a, b, c);
+          return d;
+        };
+        const ds = $("dsum");
+        ds.innerHTML = "";
+        const hrs = D.ms / 3600000;
+        ds.append(
+          box(
+            "EXP gained",
+            D.expN ? D.exp.toLocaleString() : "--",
+            D.lvls +
+              " level-up" +
+              (D.lvls === 1 ? "" : "s") +
+              (D.expN < D.n ? " (older sessions have no EXP number)" : ""),
+          ),
+          box("Time played", fmtT(D.ms), D.n + " session" + (D.n === 1 ? "" : "s")),
+          box("EXP / hour", D.expN && hrs > 0 ? Math.round(D.exp / hrs).toLocaleString() : "--", "average"),
+          box("Mesos earned", D.earned ? fmtM(D.earned) : "--", "before spending"),
+          box("Mesos spent", D.spent ? fmtM(D.spent) : "0", "potions, scrolls and more"),
+          box("Net mesos", fmtM(D.net), hrs > 0 ? fmtM(D.net / hrs) + " per hour played" : ""),
+        );
+        const dc = $("dcats");
+        dc.innerHTML = "";
+        const rows = Object.keys(D.cats)
+          .filter((c) => D.cats[c] > 0)
+          .map((c) => [c, D.cats[c]]);
+        if (D.auto > 0) rows.push(["Seen dropping in your mesos (not sorted)", D.auto]);
+        if (!rows.length) {
+          const d = document.createElement("div");
+          d.textContent = "Nothing spent yet.";
+          dc.appendChild(d);
+        }
+        rows.forEach(([c, v]) => {
+          const d = document.createElement("div"),
+            a = document.createElement("span"),
+            b = document.createElement("b");
+          a.textContent = c;
+          b.textContent = fmtM(v);
+          d.append(a, b);
+          dc.appendChild(d);
+        });
+        const dl = $("dsess");
+        dl.innerHTML = "";
+        if (!D.ss.length) {
+          const d = document.createElement("div");
+          d.textContent = "No saved sessions on this day.";
+          dl.appendChild(d);
+        }
+        D.ss.forEach((s) => {
+          const d = document.createElement("div"),
+            a = document.createElement("span"),
+            b = document.createElement("b");
+          a.textContent = (s.name || "(no name)") + " · " + fmtT(s.ms);
+          b.textContent =
+            (s.expGain != null ? s.expGain.toLocaleString() + " EXP · " : s.total.toFixed(2) + "% · ") +
+            fmtM(s.profit || 0);
+          d.append(a, b);
+          dl.appendChild(d);
+        });
+        drawDayChart();
+      }
+      function drawDayChart() {
+        const g = setupCanvas($("dayChart"));
+        if (!g) return;
+        const { x, w, h } = g,
+          days = [];
+        for (let i = 13; i >= 0; i--) days.push(shiftDay(dayKey(Date.now()), -i));
+        const data = days.map(dayData);
+        if (!data.some((d) => d.n || d.net)) {
+          note(g, "Your daily bars will show here after you save sessions.");
+          return;
+        }
+        const L = 52,
+          R = 62,
+          T = 14,
+          B = 28,
+          pw = w - L - R,
+          ph = h - T - B,
+          slot = pw / 14;
+        const nMax = Math.max(0, ...data.map((d) => d.net)),
+          nMin = Math.min(0, ...data.map((d) => d.net)),
+          span = nMax - nMin || 1,
+          y0 = T + ph - ((0 - nMin) / span) * ph;
+        const eMax = Math.max(1, ...data.map((d) => d.exp)) * 1.1;
+        x.strokeStyle = COL.grid;
+        x.beginPath();
+        x.moveTo(L, y0);
+        x.lineTo(L + pw, y0);
+        x.stroke();
+        x.fillStyle = COL.mesos;
+        x.textAlign = "right";
+        x.fillText(fmtM(nMax), L - 6, T + 4);
+        x.fillText(fmtM(nMin), L - 6, T + ph + 4);
+        x.fillStyle = COL.exp;
+        x.textAlign = "left";
+        x.fillText(Math.round(eMax).toLocaleString(), L + pw + 6, T + 4);
+        data.forEach((d, i) => {
+          const cx = L + slot * i + slot / 2,
+            bw = Math.min(26, slot * 0.6),
+            y = T + ph - ((d.net - nMin) / span) * ph;
+          x.fillStyle = d.net >= 0 ? COL.mesos : COL.bad;
+          x.fillRect(cx - bw / 2, Math.min(y, y0), bw, Math.max(1, Math.abs(y0 - y)));
+          x.fillStyle = days[i] === viewDay ? COL.ink : COL.mut;
+          x.textAlign = "center";
+          x.fillText(days[i].slice(8), cx, h - 10);
+        });
+        x.strokeStyle = COL.exp;
+        x.lineWidth = 2.5;
+        x.beginPath();
+        let on = false;
+        data.forEach((d, i) => {
+          if (!d.expN) {
+            on = false;
+            return;
+          }
+          const cx = L + slot * i + slot / 2,
+            y = T + ph - (d.exp / eMax) * ph;
+          if (on) x.lineTo(cx, y);
+          else {
+            x.moveTo(cx, y);
+            on = true;
+          }
+        });
+        x.stroke();
+        data.forEach((d, i) => {
+          if (!d.expN) return;
+          const cx = L + slot * i + slot / 2,
+            y = T + ph - (d.exp / eMax) * ph;
+          x.fillStyle = COL.exp;
+          x.beginPath();
+          x.arc(cx, y, 3.5, 0, 7);
+          x.fill();
+        });
+      }
+      $("dayPrev").onclick = () => {
+        viewDay = shiftDay(viewDay, -1);
+        drawDaily();
+      };
+      $("dayNext").onclick = () => {
+        if (viewDay < dayKey(Date.now())) {
+          viewDay = shiftDay(viewDay, 1);
+          drawDaily();
+        }
+      };
+      $("dayToday").onclick = () => {
+        viewDay = dayKey(Date.now());
+        drawDaily();
+      };
+      $("dayExpBtn").onclick = () => {
+        const v = parseAmt($("dayExpAmt").value);
+        if (v === null) {
+          bad("dayExpAmt");
+          return;
+        }
+        const [y, m, d] = viewDay.split("-").map(Number),
+          now = new Date(),
+          t = viewDay === dayKey(now.getTime()) ? now.getTime() : new Date(y, m - 1, d, 12).getTime();
+        const l = store.get("dayExp", []);
+        l.push({ t, amt: v, cat: $("dayExpCat").value || "Other" });
+        store.set("dayExp", l);
+        $("dayExpAmt").value = "";
+        drawDaily();
+      };
+      function drawSpots() {
+        const by = {};
+        store.get("sessions", []).forEach((s) => {
+          const n = s.name || "(no name)",
+            o = by[n] || (by[n] = { ms: 0, net: 0, exp: 0, expMs: 0, pct: 0, n_: 0 });
+          o.ms += s.ms;
+          o.net += s.profit || 0;
+          o.n_++;
+          o.pct += s.total || 0;
+          if (s.expGain != null) {
+            o.exp += s.expGain;
+            o.expMs += s.ms;
+          }
+        });
+        const rows = Object.keys(by)
+          .map((n) => ({
+            n,
+            ...by[n],
+            mph: by[n].ms > 0 ? by[n].net / (by[n].ms / 3600000) : 0,
+            eph: by[n].expMs > 0 ? by[n].exp / (by[n].expMs / 3600000) : null,
+          }))
+          .sort((a, b) => b.mph - a.mph);
+        $("spotsEmpty").hidden = rows.length > 0;
+        const el = $("spots");
+        el.innerHTML = "";
+        const top = Math.max(1, ...rows.map((r) => Math.abs(r.mph)));
+        rows.forEach((r) => {
+          const d = document.createElement("div"),
+            left = document.createElement("div"),
+            nm = document.createElement("span"),
+            b = document.createElement("b"),
+            bar = document.createElement("div");
+          left.style.flex = "1";
+          d.style.alignItems = "center";
+          nm.textContent = r.n + " (" + r.n_ + " session" + (r.n_ === 1 ? "" : "s") + ")";
+          left.appendChild(nm);
+          bar.className = "bar";
+          bar.style.width = Math.max(2, (Math.abs(r.mph) / top) * 100) + "%";
+          if (r.mph < 0) bar.style.background = COL.bad;
+          left.appendChild(bar);
+          b.textContent =
+            fmtM(r.mph) + "/h" + (r.eph !== null ? " · " + Math.round(r.eph).toLocaleString() + " EXP/h" : "");
+          d.append(left, b);
+          el.appendChild(d);
+        });
+      }
+      const _drawHist = drawHist;
+      drawHist = function () {
+        _drawHist();
+        drawSpots();
+        drawDaily();
+      };
+      window.addEventListener("resize", () => {
+        drawLive();
+        drawDayChart();
+      });
+      drawSpots();
+      drawDaily();
+
+      /* ---------- pop-out mini window (stays on top of the game) ---------- */
+      let pop = null;
+      const POP_CSS = `
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:linear-gradient(#bfe6ff,#e9f6ff);font:15px/1.3 "Fredoka","Trebuchet MS",sans-serif;color:#2b1a12;padding:8px}
+.card{background:#fff7e8;border:3px solid #d9b46a;border-radius:14px;box-shadow:0 3px 0 rgba(0,0,0,.18);padding:8px 10px;height:100%;display:flex;flex-direction:column;gap:6px}
+.top{display:flex;align-items:center;gap:7px;font-weight:700}
+.dot{width:11px;height:11px;border-radius:50%;background:#7f95b0;flex:none}
+.dot.live{background:#4ade5a;box-shadow:0 0 0 3px rgba(74,222,90,.3)}.dot.paused{background:#d9a21b}
+.time{margin-left:auto;font-variant-numeric:tabular-nums}
+.bar{position:relative;height:18px;border-radius:9px;background:#544a5e;border:2px solid #2b1a12;overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(#a6e34a,#5fb31f);width:0;transition:width .6s}
+.bar span{position:absolute;inset:0;text-align:center;color:#fff;font:700 12px/14px "Fredoka",sans-serif;text-shadow:0 1px 2px #000}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.l{font:600 10px "Fredoka",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#7d6552}
+.v{font:700 19px "Fredoka",sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v small{font:500 11px "Fredoka",sans-serif;color:#7d6552}
+.btns{display:flex;gap:6px;margin-top:auto}
+button{flex:1;font:600 13px "Fredoka",sans-serif;color:#fff;border:2px solid rgba(0,0,0,.28);border-radius:999px;padding:5px 8px;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+#pPause{background:#d9a21b}#pStop{background:#d0443a}
+button:active{transform:translateY(1px)}`;
+      const POP_HTML = `<div class="card">
+  <div class="top"><span class="dot" id="pDot"></span><span id="pState">Ready</span><span class="time" id="pTime">0:00:00</span></div>
+  <div class="bar"><div class="fill" id="pFill"></div><span id="pPct">--</span></div>
+  <div class="grid">
+    <div><div class="l">EXP / hour</div><div class="v"><span id="pRate">--</span> <small id="pUnit"></small></div></div>
+    <div><div class="l">Next level</div><div class="v" id="pNext">--</div></div>
+    <div><div class="l">Net mesos</div><div class="v" id="pNetv">--</div></div>
+    <div><div class="l">Mesos / hour</div><div class="v" id="pMph">--</div></div>
+  </div>
+  <div class="btns"><button id="pPause">Start</button><button id="pStop">Stop &amp; save</button></div>
+</div>`;
+      const POP_MAP = { pPct: "gtext", pRate: "rate", pNext: "tToLevel", pNetv: "pNet", pMph: "pRate" }; // pop-out field -> main tracker number
+      function buildPop(w) {
+        const doc = w.document;
+        doc.title = "Grind tracker";
+        const f = doc.createElement("link");
+        f.rel = "stylesheet";
+        f.href = "https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap";
+        doc.head.appendChild(f);
+        const st = doc.createElement("style");
+        st.textContent = POP_CSS;
+        doc.head.appendChild(st);
+        doc.body.innerHTML = POP_HTML;
+        doc.getElementById("pPause").onclick = () => $("start").click();
+        doc.getElementById("pStop").onclick = () => $("stop").click();
+        const cur = {};
+        (function frame() {
+          // the pop-out runs its own smooth animation, so it stays smooth even while this tab is hidden
+          if (pop !== w || w.closed) return;
+          const g = (id) => doc.getElementById(id);
+          for (const pid in POP_MAP) {
+            const t = tween[POP_MAP[pid]];
+            let txt = "--";
+            if (t && t.tgt !== null && t.tgt !== undefined) {
+              cur[pid] = cur[pid] === undefined || cur[pid] === null ? t.tgt : cur[pid] + (t.tgt - cur[pid]) * 0.1;
+              if (Math.abs(t.tgt - cur[pid]) <= Math.max(Math.abs(t.tgt) * 0.0003, 1e-7)) cur[pid] = t.tgt;
+              txt = t.fmt(cur[pid]);
+            } else cur[pid] = null;
+            if (g(pid).textContent !== txt) g(pid).textContent = txt;
+          }
+          const btn = $("start").textContent,
+            live = btn === "Pause",
+            paused = btn === "Resume";
+          g("pUnit").textContent = reqExp() ? "EXP/h" : "%/h";
+          g("pState").textContent = live ? "Tracking" : paused ? "Paused" : "Ready";
+          g("pDot").className = "dot" + (live ? " live" : paused ? " paused" : "");
+          g("pTime").textContent = fmtT(elapsedMs());
+          g("pFill").style.width = (S.last === null ? 0 : S.last) + "%";
+          g("pPause").textContent = btn;
+          w.requestAnimationFrame(frame);
+        })();
+      }
+      $("popOut").onclick = async () => {
+        if (pop && !pop.closed) {
+          pop.focus();
+          return;
+        }
+        try {
+          if ("documentPictureInPicture" in window) {
+            pop = await documentPictureInPicture.requestWindow({ width: 300, height: 250 });
+          } else {
+            pop = window.open("", "grindPop", "width=300,height=270");
+            if (!pop) {
+              $("log").textContent =
+                "The browser blocked the pop-out window. Allow pop-ups for this page and try again.";
+              return;
+            }
+            $("log").textContent =
+              "Your browser can not keep the pop-out on top. Use Chrome or Edge for an always-on-top window.";
+          }
+          const w = pop;
+          buildPop(w);
+          w.addEventListener("pagehide", () => {
+            if (pop === w) pop = null;
+          });
+        } catch (e) {
+          pop = null;
+          $("log").textContent = "Could not open the pop-out: " + (e.message || e);
+        }
+      };
+      window.addEventListener("pagehide", () => {
+        try {
+          if (pop) pop.close();
+        } catch (e) {}
+      });
+
+      /* ---------- buttons ---------- */
+      $("start").onclick = () => {
+        armed = true;
+        if (S.running) {
+          S.acc += Date.now() - S.startT;
+          S.running = false;
+          $("start").textContent = "Resume";
+        } else {
+          S.running = true;
+          S.startT = Date.now();
+          $("start").textContent = "Pause";
+        }
+        render();
+      };
+      $("reset").onclick = () => {
+        if ((!S.total && !mesoTracked()) || confirm("Clear this session?")) {
+          S = fresh();
+          armed = false;
+          $("start").textContent = "Start";
+          render();
+        }
+      };
+
+      $("mRestart").onclick = () => {
+        S.mStart = S.mNow = null;
+        S.mIn = S.mOut = 0;
+        S.mEvents = [];
+        S.mCand = null;
+        S.mCandN = 0;
+        $("pRead").textContent = "Mesos tracking restarted. The next clean reading becomes your starting point.";
+        render();
+      };
+
+      /* profit buttons */
+      function ensureRunning() {
+        if (!S.running && armed) {
+          S.running = true;
+          S.startT = Date.now();
+          $("start").textContent = "Pause";
+        }
+      }
+      const bad = (id) => {
+        $(id).style.borderColor = "var(--bad)";
+        setTimeout(() => ($(id).style.borderColor = ""), 1200);
+      };
+      $("mNowBtn").onclick = () => {
+        const v = parseAmt($("mNowIn").value);
+        if (v === null) {
+          bad("mNowIn");
+          return;
+        }
+        feedMesos(v, true);
+        $("mNowIn").value = "";
+        render();
+      };
+      $("addInBtn").onclick = () => {
+        const v = parseAmt($("addIn").value);
+        if (v === null) {
+          bad("addIn");
+          return;
+        }
+        S.extra += v;
+        S.extraIn += v;
+        $("addIn").value = "";
+        render();
+      };
+      $("addOutBtn").onclick = () => {
+        const v = parseAmt($("addOut").value);
+        if (v === null) {
+          bad("addOut");
+          return;
+        }
+        S.extra -= v;
+        S.extraOut += v;
+        const cat = $("outCat").value || "Other";
+        S.cats[cat] = (S.cats[cat] || 0) + v;
+        $("addOut").value = "";
+        render();
+      };
+      $("rmRate").value = store.get("rmRate", "");
+      $("rmCur").value = store.get("rmCur", "$");
+      $("rmRate").oninput = () => {
+        store.set("rmRate", $("rmRate").value);
+        render();
+      };
+      $("rmCur").oninput = () => {
+        store.set("rmCur", $("rmCur").value);
+        render();
+      };
+      $("addManual").onclick = () => {
+        const v = parseFloat($("manual").value);
+        if (isNaN(v) || v < 0 || v >= 100) return;
+        if (!S.running) $("start").click();
+        feed(v, true);
+        $("manual").value = "";
+        render();
+      };
+      $("req").value = store.get("req", "");
+      $("req").oninput = () => {
+        store.set("req", $("req").value);
+        render();
+      };
+
+      /* ---------- history ---------- */
+      function drawHist() {
+        const list = store.get("sessions", []);
+        $("histEmpty").hidden = list.length > 0;
+        $("hist").innerHTML = "";
+        list
+          .slice()
+          .reverse()
+          .forEach((s, i) => {
+            const tr = document.createElement("tr");
+            const cells = [
+              (s.name || "(no name)") +
+                (s.lvlEnd
+                  ? " (Lv " + (s.lvlStart && s.lvlStart !== s.lvlEnd ? s.lvlStart + "→" : "") + s.lvlEnd + ")"
+                  : ""),
+              new Date(s.date).toLocaleDateString(),
+              fmtT(s.ms),
+              (s.startPct == null ? "-" : s.startPct.toFixed(2) + "%") +
+                " / " +
+                (s.mStart == null ? "-" : fmtM(s.mStart)),
+              s.total.toFixed(2) + "%",
+              s.req ? Math.round((s.rate / 100) * s.req).toLocaleString() + " EXP/h" : s.rate.toFixed(2) + " %/h",
+              s.profitRate === undefined ? "-" : fmtM(s.profitRate) + "/h",
+            ];
+            cells.forEach((c) => {
+              const td = document.createElement("td");
+              td.textContent = c;
+              tr.appendChild(td);
+            });
+            const td = document.createElement("td"),
+              b = document.createElement("button");
+            b.textContent = "Delete";
+            b.onclick = () => {
+              const l = store.get("sessions", []);
+              l.splice(l.length - 1 - i, 1);
+              store.set("sessions", l);
+              drawHist();
+            };
+            td.appendChild(b);
+            tr.appendChild(td);
+            $("hist").appendChild(tr);
+          });
+      }
+      function saveSession() {
+        const ms = elapsedMs();
+        if (ms < 1000 || (!S.total && !mesoTracked())) {
+          $("log").textContent = "Nothing to save yet. Grind a bit first.";
+          return false;
+        }
+        const l = store.get("sessions", []);
+        l.push({
+          name: $("mapName").value.trim(),
+          date: Date.now(),
+          ms,
+          total: normTotal(),
+          rate: perHour(normTotal(), ms),
+          req: reqExp(),
+          lvls: S.lvls,
+          deaths: S.deaths,
+          profit: netProfit(),
+          profitRate: netProfit() / (ms / 3600000),
+          expGain: S.expOk && S.expGain > 0 ? Math.round(S.expGain) : null,
+          mEarned: S.mIn + S.extraIn,
+          mSpent: S.mOut + S.extraOut,
+          mOutAuto: S.mOut,
+          cats: S.cats,
+          lvlEnd: parseInt($("lvl").value, 10) || null,
+          lvlStart: S.lvlStart || null,
+          startPct: S.startPct,
+          startAbs: S.startAbs,
+          mStart: S.mStart,
+          mEnd: S.mNow,
+        });
+        store.set("sessions", l);
+        drawHist();
+        return true;
+      }
+      $("save").onclick = () => {
+        if (saveSession()) $("log").textContent = "Session saved.";
+      };
+      $("stop").onclick = () => {
+        if (S.running) {
+          S.acc += Date.now() - S.startT;
+          S.running = false;
+        }
+        const t = fmtT(S.acc),
+          g = normTotal().toFixed(2);
+        if (saveSession()) {
+          $("log").textContent =
+            "Stopped and saved: " +
+            t +
+            ", gained " +
+            g +
+            "%" +
+            (mesoTracked() ? ", net " + fmtM(netProfit()) + " mesos" : "") +
+            ".";
+          S = fresh();
+          armed = false;
+          $("start").textContent = "Start";
+          render();
+        } else {
+          S.acc = Math.max(0, S.acc);
+          $("start").textContent = S.acc > 0 ? "Resume" : "Start";
+        }
+      };
+      $("lvl").value = store.get("lvl", "");
+      $("lvl").oninput = () => store.set("lvl", $("lvl").value);
+      $("mapName").value = store.get("map", "");
+      $("mapName").oninput = () => store.set("map", $("mapName").value);
+      drawHist();
+
+      /* ---------- screen capture + box selection ---------- */
+      const video = document.createElement("video");
+      video.muted = true;
+      video.playsInline = true;
+      const view = $("view"),
+        vctx = view.getContext("2d");
+      let roi = store.get("roi", null),
+        roi2 = store.get("roi2", null),
+        stream = null,
+        drag = null;
+      const target = () => document.querySelector('input[name="target"]:checked').value;
+
+      $("share").onclick = async () => {
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
+          video.srcObject = stream;
+          await video.play();
+          $("empty").hidden = true;
+          stream.getVideoTracks()[0].onended = stopShare;
+          $("ocrState").textContent = roi
+            ? "Window shared. Using your saved box. Check it still sits on the EXP text."
+            : "Window shared. Now click and drag on the picture to draw a box around the EXP text.";
+        } catch (e) {
+          $("ocrState").textContent =
+            "Sharing failed: " +
+            ((e && e.name) || "error") +
+            ". Open this file in Chrome or Edge directly from your PC (not inside another app), and allow screen sharing.";
+        }
+      };
+      function stopShare() {
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        stream = null;
+        video.srcObject = null;
+        $("empty").hidden = false;
+      }
+      $("stopShare").onclick = stopShare;
+
+      setInterval(() => {
+        if (!stream || !video.videoWidth) return;
+        view.height = Math.round((view.width * video.videoHeight) / video.videoWidth);
+        vctx.drawImage(video, 0, 0, view.width, view.height);
+        const box = (r, col) => {
+          if (r) {
+            vctx.strokeStyle = col;
+            vctx.lineWidth = 2;
+            vctx.strokeRect(r.x * view.width, r.y * view.height, r.w * view.width, r.h * view.height);
+          }
+        };
+        box(roi, "#ff6b3d");
+        box(roi2, "#7be0a8");
+        if (drag) box(drag, target() === "mesos" ? "#7be0a8" : "#ff6b3d");
+      }, 300);
+
+      const pos = (e) => {
+        const b = view.getBoundingClientRect();
+        return {
+          x: Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)),
+          y: Math.min(1, Math.max(0, (e.clientY - b.top) / b.height)),
+        };
+      };
+      view.onpointerdown = (e) => {
+        if (!stream) return;
+        view.setPointerCapture(e.pointerId);
+        const p = pos(e);
+        drag = { x: p.x, y: p.y, w: 0, h: 0, ox: p.x, oy: p.y };
+      };
+      view.onpointermove = (e) => {
+        if (!drag) return;
+        const p = pos(e);
+        drag.x = Math.min(p.x, drag.ox);
+        drag.y = Math.min(p.y, drag.oy);
+        drag.w = Math.abs(p.x - drag.ox);
+        drag.h = Math.abs(p.y - drag.oy);
+      };
+      view.onpointerup = () => {
+        if (drag && drag.w > 0.01 && drag.h > 0.003) {
+          const b = { x: drag.x, y: drag.y, w: drag.w, h: drag.h };
+          if (target() === "mesos") {
+            roi2 = b;
+            store.set("roi2", b);
+            $("ocrState").textContent = "Mesos box saved. It reads together with the EXP bar.";
+          } else {
+            roi = b;
+            store.set("roi", b);
+            $("ocrState").textContent = "EXP box saved. Reading starts by itself in a moment.";
+          }
+        }
+        drag = null;
+      };
+
+      $("clearBox").onclick = () => {
+        const t = target();
+        if (t === "mesos") {
+          roi2 = null;
+          store.set("roi2", null);
+          $("roi2").hidden = $("roi2Label").hidden = true;
+        } else {
+          roi = null;
+          store.set("roi", null);
+          $("roi").hidden = true;
+        }
+        render();
+      };
+
+      $("showPrev").checked = store.get("showPrev", false) === true;
+      $("prevWrap").hidden = !$("showPrev").checked;
+      $("showPrev").onchange = () => {
+        $("prevWrap").hidden = !$("showPrev").checked;
+        store.set("showPrev", $("showPrev").checked);
+      };
+
+      /* ---------- OCR ---------- */
+      let worker = null,
+        busy = false,
+        ocrFails = 0;
+      const loadScript = (src) =>
+        new Promise((res, rej) => {
+          const s = document.createElement("script");
+          s.src = src;
+          s.onload = res;
+          s.onerror = rej;
+          document.head.appendChild(s);
+        });
+
+      async function initOCR() {
+        if (worker) return worker;
+        $("ocrState").textContent = "Loading the reader (needs internet the first time)...";
+        await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+        worker = await Tesseract.createWorker("eng");
+        await worker.setParameters({ tessedit_char_whitelist: "0123456789[]%.,EXP ", tessedit_pageseg_mode: "7" });
+        return worker;
+      }
+
+      function prepROI(r, canvasId, mode) {
+        // mode: "auto", "bright" (text is light) or "dark" (text is dark)
+        const vw = video.videoWidth,
+          vh = video.videoHeight;
+        const sx = r.x * vw,
+          sy = r.y * vh,
+          sw = r.w * vw,
+          sh = r.h * vh;
+        const k = Math.max(1, Math.min(Math.max(3, Math.ceil(100 / sh)), 2000 / sw)); // scale small text up, capped
+        const c = $(canvasId);
+        c.width = Math.round(sw * k);
+        c.height = Math.round(sh * k);
+        const x = c.getContext("2d", { willReadFrequently: true });
+        x.imageSmoothingEnabled = true;
+        x.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
+        const im = x.getImageData(0, 0, c.width, c.height),
+          d = im.data;
+        const n = d.length / 4,
+          gray = new Uint8Array(n),
+          hist = new Array(256).fill(0);
+        for (let i = 0; i < n; i++) {
+          const g = Math.round(0.3 * d[i * 4] + 0.59 * d[i * 4 + 1] + 0.11 * d[i * 4 + 2]);
+          gray[i] = g;
+          hist[g]++;
+        }
+        let sum = 0;
+        for (let t = 0; t < 256; t++) sum += t * hist[t];
+        let wB = 0,
+          sB = 0,
+          best = 0,
+          thr = 128; // Otsu threshold: works for any bar colour
+        for (let t = 0; t < 256; t++) {
+          wB += hist[t];
+          if (!wB) continue;
+          const wF = n - wB;
+          if (!wF) break;
+          sB += t * hist[t];
+          const mB = sB / wB,
+            mF = (sum - sB) / wF,
+            v = wB * wF * (mB - mF) * (mB - mF);
+          if (v > best) {
+            best = v;
+            thr = t;
+          }
+        }
+        let bright = 0;
+        for (let i = 0; i < n; i++) if (gray[i] > thr) bright++;
+        let textIsBright = bright < n / 2; // auto: text is the smaller group of pixels
+        if (mode === "bright") {
+          textIsBright = true;
+          thr = Math.max(thr, 170);
+        } // game text is light: only keep clearly bright pixels
+        if (mode === "dark") textIsBright = false;
+        for (let i = 0; i < n; i++) {
+          const isText = textIsBright ? gray[i] > thr : gray[i] <= thr;
+          const v = isText ? 0 : 255;
+          d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v;
+          d[i * 4 + 3] = 255;
+        }
+        if (canvasId === "roi") eraseBrackets(d, c.width, c.height);
+        x.putImageData(im, 0, 0);
+        c.hidden = false;
+        return c;
+      }
+      /* The "[" and "]" around the percent are thin and a little shorter than the digits. The reader keeps turning "[" into a 1
+   (so [2.83%] became 12.83%), so we find those shapes in the black-and-white picture and paint them white before reading. */
+      function eraseBrackets(d, W, H) {
+        const ink = new Uint8Array(W * H);
+        for (let i = 0; i < W * H; i++) ink[i] = d[i * 4] === 0 ? 1 : 0;
+        const seen = new Uint8Array(W * H),
+          comps = [],
+          stack = [];
+        for (let s = 0; s < W * H; s++) {
+          if (!ink[s] || seen[s]) continue;
+          let x0 = W,
+            y0 = H,
+            x1 = 0,
+            y1 = 0;
+          const pts = [];
+          seen[s] = 1;
+          stack.push(s);
+          while (stack.length) {
+            const p = stack.pop(),
+              px = p % W,
+              py = (p - px) / W;
+            pts.push(p);
+            if (px < x0) x0 = px;
+            if (px > x1) x1 = px;
+            if (py < y0) y0 = py;
+            if (py > y1) y1 = py;
+            if (px > 0 && ink[p - 1] && !seen[p - 1]) {
+              seen[p - 1] = 1;
+              stack.push(p - 1);
+            }
+            if (px < W - 1 && ink[p + 1] && !seen[p + 1]) {
+              seen[p + 1] = 1;
+              stack.push(p + 1);
+            }
+            if (py > 0 && ink[p - W] && !seen[p - W]) {
+              seen[p - W] = 1;
+              stack.push(p - W);
+            }
+            if (py < H - 1 && ink[p + W] && !seen[p + W]) {
+              seen[p + W] = 1;
+              stack.push(p + W);
+            }
+          }
+          comps.push({ x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, pts });
+        }
+        const hs = comps
+          .filter((c) => c.w < W * 0.3 && c.h > H * 0.08)
+          .map((c) => c.h)
+          .sort((a, b) => a - b);
+        if (hs.length < 4) return 0;
+        const med = hs[hs.length >> 1];
+        let n = 0; // the digit height
+        for (const c of comps) {
+          if (c.h < med * 0.7 || c.h > med * 1.05 || c.w > med * 0.45) continue; // brackets are about digit height and thin
+          const lo = new Array(c.h).fill(1e9),
+            hi = new Array(c.h).fill(-1);
+          for (const p of c.pts) {
+            const px = p % W,
+              r = (p - px) / W - c.y0;
+            if (px < lo[r]) lo[r] = px;
+            if (px > hi[r]) hi[r] = px;
+          }
+          const wid = (r) => (hi[r] < 0 ? 0 : hi[r] - lo[r] + 1),
+            band = Math.max(2, Math.round(c.h * 0.2));
+          const mids = [];
+          for (let r = Math.round(c.h * 0.35); r < Math.round(c.h * 0.65); r++) mids.push(wid(r));
+          mids.sort((a, b) => a - b);
+          const stem = Math.max(1, mids[mids.length >> 1] || 1);
+          let top = 0,
+            bot = 0;
+          for (let r = 0; r < band; r++) {
+            top = Math.max(top, wid(r));
+            bot = Math.max(bot, wid(c.h - 1 - r));
+          }
+          if (top >= stem * 1.5 && bot >= stem * 1.25) {
+            for (const p of c.pts) {
+              const i = p * 4;
+              d[i] = d[i + 1] = d[i + 2] = 255;
+            }
+            n++;
+          } // wide at the top AND the bottom: [ or ]
+        }
+        return n;
+      }
+
+      $("findMesos").onclick = async () => {
+        const st = $("ocrState");
+        if (!stream || !video.videoWidth) {
+          st.textContent = "Share your game window first.";
+          return;
+        }
+        if (busy) {
+          st.textContent = "Busy reading, try again in a second.";
+          return;
+        }
+        busy = true;
+        const btn = $("findMesos");
+        btn.disabled = true;
+        try {
+          st.textContent = "Looking for the mesos line on the screen...";
+          const w = await initOCR();
+          await w.setParameters({ tessedit_char_whitelist: "", tessedit_pageseg_mode: "11" });
+          const vw = video.videoWidth,
+            vh = video.videoHeight,
+            k = vw < 1800 ? 2 : 1;
+          const c = document.createElement("canvas");
+          c.width = vw * k;
+          c.height = vh * k;
+          const x = c.getContext("2d");
+          x.drawImage(video, 0, 0, c.width, c.height);
+          const { data } = await w.recognize(c, {}, { blocks: true });
+          const words = [];
+          (data.blocks || []).forEach((b) =>
+            b.paragraphs.forEach((pg) => pg.lines.forEach((l) => l.words.forEach((wd) => words.push(wd)))),
+          );
+          if (!words.length && data.words) data.words.forEach((wd) => words.push(wd));
+          const label = words.filter((wd) => /^[^a-z]*m[e3]s[o0]s?[^a-z]*$/i.test(wd.text.trim()));
+          let found = null;
+          for (const lb of label) {
+            const cy = (lb.bbox.y0 + lb.bbox.y1) / 2,
+              h = lb.bbox.y1 - lb.bbox.y0;
+            const nums = words
+              .filter((wd) => /\d[\d,.]*\d|\d/.test(wd.text) && Math.abs((wd.bbox.y0 + wd.bbox.y1) / 2 - cy) < h * 1.2)
+              .sort((a, b) => Math.abs(a.bbox.x0 - lb.bbox.x1) - Math.abs(b.bbox.x0 - lb.bbox.x1));
+            if (nums.length) {
+              found = nums[0];
+              break;
+            }
+          }
+          if (!found) {
+            st.innerHTML =
+              '<span class="warn">Could not find the mesos line. Open the inventory so the mesos row is visible, or draw the green box by hand once.</span>';
+          } else {
+            const padX = 6 * k,
+              padY = 3 * k,
+              b = found.bbox;
+            roi2 = {
+              x: Math.max(0, (b.x0 - padX) / c.width),
+              y: Math.max(0, (b.y0 - padY) / c.height),
+              w: Math.min(1, (b.x1 - b.x0 + 2 * padX) / c.width),
+              h: Math.min(1, (b.y1 - b.y0 + 2 * padY) / c.height),
+            };
+            store.set("roi2", roi2);
+            st.innerHTML =
+              '<span class="ok">Found the mesos number (' + esc(found.text) + ") and boxed it in green.</span>";
+          }
+        } catch (e) {
+          st.textContent = "Could not search the screen: " + (e.message || e);
+        } finally {
+          try {
+            if (worker) await worker.setParameters({ tessedit_pageseg_mode: "7" });
+          } catch (e) {}
+          busy = false;
+          btn.disabled = false;
+        }
+      };
+
+      /* ---------- fixed-font digit reader ----------
+   The game's EXP text uses one fixed pixel font, so we recognise each digit by shape instead of trusting the general text reader,
+   which mixes up 6/8, 3/8, 5/8 and so on. The templates below were cut from real screenshots of the EXP bar. */
+      const GLYPHS = [
+        [
+          "1",
+          "00000003940000000000269700000000247999000000036999990000000336999900000000014899000000000006990000000000069900000000000699000000000006990000000000069900000000000699000000000006990000000000069600000000000694000000000004940000",
+        ],
+        [
+          "0",
+          "00006999972000000389999940000248766667842037993000017973999930000069999999300000699999993000006999999930000069999999300000699999993000006999999930000069999999300000699937993000006973036753333466300002899999300000006999972000",
+        ],
+        [
+          "9",
+          "00027999972000000599999950000248766667843067971000039990999600000289906796000002899003885333369990002799999999900006999999999000023333479990000000000289900231000000699004940000028970036743333586300006999999500000037999972000",
+        ],
+        [
+          "4",
+          "00000000274000000000016960000000002699600000000069996000000026889960000001696389600000269820696000667972028960009999600399720099998667999760679999999999900246666799976000000002897200000000006960000000000069600000000000363000",
+        ],
+        [
+          "7",
+          "04999999999970679999999999903466666668999000000000049990000000000399900000000003999000000000039990000000000399900000000003999000000000477330000000017830000000003784000000000289400000000003993000000000039930000000000266200000",
+        ],
+        [
+          "3",
+          "00039999972000001699999940003368666668842099960000038960334200000069900000000001796000000023369720000004899962000000069999300000000233477520000000000179400231000000694067950000017940346743333675200005999999300000039999972000",
+        ],
+        [
+          "5",
+          "02799999999940679999999999709999766666664099993000000000999930000000009999300000000034895333320000002699999840000003999999600000013333467630000000000069700241000000699004961000006970036853333476300005999999600000027999973000",
+        ],
+        [
+          "0",
+          "00027999960000000499999830000248766667842037982000039973999600000399999996000003999999960000039999689600000399990696000003999906960000039999069600000399990696000003999906971000039973036753333586300003999999400000027999972000",
+        ],
+        [
+          "5",
+          "04999999999720679999999999609999766666663099971000000000999500000000009995000000000036984333320000023799999820000006999999400000023333578520000000000399600341000003999004930000039960036643333585200006999999400000049999972000",
+        ],
+        [
+          "4",
+          "00000000472000000000028950000000002699600000000179996000000037999960000001795599600002369723996000679971039960009999600399600099998667998660679999999999900246666899974000000004997200000000039960000000000289500000000000472000",
+        ],
+        [
+          "7",
+          "47999999999740999999999999903466666668999000000000038990000000000069900000000000699000000000006990000000000069900000000002784000000000486200000000148820000000037972000000000699600000000006996000000000059940000000000277200000",
+        ],
+        [
+          "6",
+          "00027999972000000499999940000248766667852036982000017960999600000036409997100000000099997433320000999999999820009999999999610099995333348730999710000069609996000000699034883000017960003786666785200003999999400000027999972000",
+        ],
+        [
+          "1",
+          "00000004990000000000389900000000038999000000006899990000000035999900000000016999000000000039990000000000399900000000002899000000000006990000000000069900000000000699000000000006990000000000069900000000000599000000000003740000",
+        ],
+        [
+          "6",
+          "00049999972000002899999961003369766667962099971000028970999600000025409997100000000099996333320000999999999830009999999999720099984333359860999600000289909996000000699099971000028960336976666785200016999999400000027999972000",
+        ],
+        [
+          "6",
+          "00049999972000002899999950003369766667852099971000017970999600000035309996000000000099985333320000999999999820009999999999620099984333337840999500000069909993000000699099961000017960336976666785200017999999400000049999972000",
+        ],
+        [
+          "7",
+          "44799999999720679999999999700366666679999000000000148990000000000069900000000000699000000000006990000000000179600000000004983000000001585200000000159820000000016962000000000399300000000003993000000000028820000000000044000000",
+        ],
+        [
+          "0",
+          "00039999994000000599999960000258766667853067971000017990999600000069909996000000699099960000006990999600000069909996000000699099960000006990999600000069909996000000499036971000016960025876666785200004999999500000027999993000",
+        ],
+        [
+          "2",
+          "00027999972000000499999940000258766668842036971000038960346300000069900000000001796000000000169720000000016952000000001598200000000279620000000016972000000002796100000000169950000000037999866664000499999999972004999999999600",
+        ],
+        [
+          "1",
+          "00000037640000000000699900000000348999000000009999990000000067999900000000017999000000000069990000000000699900000000006999000000000069990000000000699900000000006999000000000069990000000000699900000000004973000000000027400000",
+        ],
+        [
+          "8",
+          "00049999996000024799999973300499644447999067993000027990999930000069903699300002799002796444479970003799999973200037999999720003895333337760049720000069900496100000699004993000006990025776666674300004999999600000027999973000",
+        ],
+        [
+          "5",
+          "99999999999970999999999997409999744444420099962000000000999400000000009996200000000047997444420000024799999730000004999999600000023333368640000000000499903452000004997099940000049940336766666774200027999999300000049999972000",
+        ],
+        [
+          "1",
+          "00000039740000000033699900000000999999000000009999990000000047999900000000025999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000027740000",
+        ],
+        [
+          "3",
+          "00049999960000333699999863009999644447974099972000049990444200000399900000000004986000000034479600000000699973000000006999720000000023359760000000000399906664100003999099993000039740335776666773000004999997200000027999960000",
+        ],
+        [
+          "6",
+          "00049999994000024799999973200499644447997067961000026970999400000024209997300000000099997444420000999999999740009999999999720099974333348760999400000069906794000000699004972000027990025776666784300004999999600000027999973000",
+        ],
+        [
+          "9",
+          "00279999993000025999999963204799644447994099961000027970999400000069906797300003899002797444479990003799999999900002799999999000002333348990000000000069903452000000697047972000027940026976666774200027999999300000027999972000",
+        ],
+        [
+          "3",
+          "00049999994000024899999972000499744447972034752000027976002000000069990000000023784300000244799600000003999972000000039999720000000133337730000000000069740363000000696304960000006940025766666674200006999999400000049999993000",
+        ],
+        [
+          "4",
+          "00000002672000000000049940000000015899400000000499993000000148999930000005995599300033378513993000999960039950009999744699720099999999999740999999999999903466666799864000000003995000000000039930000000000398200000000002640000",
+        ],
+        [
+          "9",
+          "00027999972000000499999940000368866668863037994000038986999930000069993799300002899904687433479999000499999999990002799999999900002566689999000000000279990244100000699906993000017973024876666786300003899999400000006999972000",
+        ],
+        [
+          "3",
+          "00037999962000000699999940006668766668864099961000069990666200000599900000000005999000000133488640000003999960000000027999600000000036688640000000000499903462000003999099950000059990346766666863300005999998200000027999940000",
+        ],
+        [
+          "1",
+          "00000027640000000000499900000000358999000000009999990000000036999900000000016999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000039990000000000399900000000003986000000000027400000",
+        ],
+        [
+          "2",
+          "00049999972000001799999940003479766668852099961000038960346200000069900000000002896000000000268630000000027940000000002797200000000379720000000006973000000002575200000000179830000000347999866665209999999999983047999999999600",
+        ],
+        [
+          "8",
+          "00027999972000000499999950000368866667863037994000028986999930000069993799300001798603687433368640000699999960000027999999742003797666679940069930000179860699300000699906993000017973024776666786300002899999400000006999972000",
+        ],
+        [
+          "3",
+          "00037999962000000699999940006668866668864099962000059990666200000399900000000005999000000133488640000003999960000000027999600000000025688640000000000499903343000003999099960000049990346766666873300005999998300000027999940000",
+        ],
+        [
+          "1",
+          "00000027940000000002699700000004479999000000066899990000000004999900000000016999000000000049990000000000499900000000004999000000000049990000000000499900000000004999000000000049990000000000499900000000004997000000000026720000",
+        ],
+        [
+          "7",
+          "99999999999970679999999999900244444469999000000000169990000000000499900000000004999000000000049990000000000499700000000027972000000003796200000000279720000000037962000000000499300000000004961000000000049400000000000274000000",
+        ],
+        [
+          "5",
+          "47999999999990999999999997609999644444420099961000000000999400000000006796100000000004996444420000023699999730000004999999720000023333348760000000000069900363000002799004940000049990025666666784300004999999400000027999972000",
+        ],
+        [
+          "3",
+          "00049999960000333699999863009999644447974099972000049990444200000399900000000004986000000034479600000000699973000000006999720000000023359760000000000399906664100003999099993000039740335776666773000004999997200000027999960000",
+        ],
+        [
+          "1",
+          "00000049940000000334799700000009999999000000066899990000000006999900000000026996000000000049940000000000499400000000004994000000000049940000000000499400000000004994000000000049940000000000499400000000004994000000000027720000",
+        ],
+        [
+          "2",
+          "00279999993000025999999963204799644447994067841000027970023000000069900000000002797000000000379940000000027953200000002799300000000379531000000004993000000014675310000000399930000000347999766666309999999999994047999999999940",
+        ],
+        [
+          "6",
+          "00049999994000003899999972000279744447972067972000026830999600000023009997200000000099997444442000999999999940009999999999720099984333337730999600000069746796000000696304960000006940025766666674200006999999400000049999993000",
+        ],
+        [
+          "1",
+          "00000003940000000000269700000000247999000000036999990000000336999900000000014899000000000006990000000000069900000000000699000000000006990000000000069900000000000699000000000006990000000000069900000000000697000000000004940000",
+        ],
+        [
+          "3",
+          "00039999972000001699999940003368666667842099960000028960345200000069900000000001797000000023369720000004899972000000069999600000000234678520000000000179600231000000699067950000006960346633333465200005999999300000039999972000",
+        ],
+        [
+          "5",
+          "04999999999720679999999999709999866666664099983000000000999600000000006796000000000003885333320000002799999830000006999999600000023566678640000000000289900231000000699004950000028970036743333586300006999999500000037999972000",
+        ],
+        [
+          "1",
+          "00000027400000000000498600000000348999000000009999990000000036999900000000016999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000039990000000000399900000000003986000000000027400000",
+        ],
+        [
+          "4",
+          "00000000660000000000038820000000003899300000000289993000000147999930000003995699300002369613993000679951039950009999300499600099997668998640679999999999900366667999864000000015995000000000017930000000000069300000000000672000",
+        ],
+        [
+          "9",
+          "00006999972000000389999940000248866668842037994000038973999930000069996899300001799904796333479999002599999999990002799999999900002466689999000000000389990132000000697305982000017960036763333676300002899999300000006999972000",
+        ],
+        [
+          "6",
+          "00027999994000000599999960003348766667852099993000017970999930000025409999300000000099995333320000999999999840009999999999600099997666667630999820000069709996000000699067982000006970036853333476300005999999600000027999973000",
+        ],
+        [
+          "2",
+          "00049999960000001799999830003368666667842099940000039960345100000399900000000003997000000000259730000000027951000000000497200000000367730000000017972000000002696200000000179930000000026999533333206799999999994047999999999720",
+        ],
+        [
+          "4",
+          "00000000460000000000038820000000003899300000000289993000000147889930000003995599300002369612893000679951028950009999400499720099998668999740679999999999900366666899974000000004996200000000017930000000000069300000000000472000",
+        ],
+        [
+          "0",
+          "00027999972000001699999950003359766667842099982000028960999600000069909996000000699099960000006990999600000069909996000000699099960000006990999600000069909996000000699099971000017960346853333586300005999999600000027999973000",
+        ],
+        [
+          "4",
+          "00000002672000000000049940000000015899400000000499993000000148999930000005995599300033378513993000999960039950009999744699720099999999999740999999999999903466666799864000000003995000000000039930000000000398200000000002640000",
+        ],
+        [
+          "9",
+          "00027999972000000499999940000368866668863037994000038986999930000069993799300002899904687433479999000499999999990002799999999900002566689999000000000279990244100000699906993000017973024876666786300003899999400000006999972000",
+        ],
+        [
+          "3",
+          "00037999962000000699999940006668766668864099961000069990666200000599900000000005999000000133488640000003999960000000027999600000000036688640000000000499903462000003999099950000059990346766666863300005999998200000027999940000",
+        ],
+        [
+          "1",
+          "00000027640000000000499900000000358999000000009999990000000036999900000000016999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000039990000000000399900000000003986000000000027400000",
+        ],
+        [
+          "2",
+          "00049999972000001799999940003479766668852099961000038960346200000069900000000002896000000000268630000000027940000000002797200000000379720000000006973000000002575200000000179830000000347999866665209999999999983047999999999600",
+        ],
+        [
+          "8",
+          "00027999972000000499999950000368866667863037994000028986999930000069993799300001798603687433368640000699999960000027999999742003797666679940069930000179860699300000699906993000017973024776666786300002899999400000006999972000",
+        ],
+        [
+          "3",
+          "00037999962000000699999940006668866668864099962000059990666200000399900000000005999000000133488640000003999960000000027999600000000025688640000000000499903343000003999099960000049990346766666873300005999998300000027999940000",
+        ],
+        [
+          "3",
+          "00027999972000023699999962003699766667984099972000039990346300000399900000000003999000000034469740000002899962000000039999620000000244479720000000000499703452000003999099940000039990369753333698400236999999620000027999962000",
+        ],
+        [
+          "8",
+          "00027999962000002699999962003489766668984099972000049990999400000399909996100005996044796444479720004999999994000049999999940044796444479720999610000599609994000003999099940000039970348753333698300026999999620000027999962000",
+        ],
+        [
+          "3",
+          "00049999972000003799999961006687666667973099940000039970345200000399900000000003996000000244469720000003999973000000039999610000000244469620000000000399403332000003994099940000039940668753334797300026999998410000049999960000",
+        ],
+        [
+          "0",
+          "00037999993000013799999953100499766667996347993000027999999930000069999997100000699999960000006999999600000069999996000000699999960000006999999600000069999996000000699947972000006974049953333589400136999999531000027999972000",
+        ],
+        [
+          "3",
+          "00247999972000004999999962003489766667984099972000039990345200000399900000000003999000000034469740000002899973000000039999620000000244469720000000000399703342000003999099940000039990348753334798400037999999620000027999972000",
+        ],
+        [
+          "1",
+          "00000026970000000002599900000003479999000000099999990000000336999900000000025999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000026970000",
+        ],
+        [
+          "1",
+          "00000027600000000000498600000000358999000000009999990000000036999900000000016999000000000039990000000000399900000000003999000000000039990000000000399900000000003999000000000039990000000000397300000000002860000000000006600000",
+        ],
+        [
+          "3",
+          "00049999972000001799999940003478666667852099950000017960344100000069900000000001796000000133368520000005999960000000049999720000000133369620000000000179403332000000697067960000006960025766666665200005999999300000039999972000",
+        ],
+        [
+          "6",
+          "00037999972000000699999950000368766667863067971000028970999600000035309997100000000099996333331000999999999940009999999999720099997433369740999710000179909996000000699036960000028970024766666784200005999998400000027999960000",
+        ],
+        [
+          "5",
+          "44799999999970999999999999909999766666653099993000000000999930000000009999300000000034685333332000000599999960000002799999720000002333468730000000000069703332000000699036971000006970024876666674200003899999500000006999972000",
+        ],
+        [
+          "0",
+          "00027999972000000399999940003467766667864099982000039990999600000399909996000003999099960000039990999600000399909996000003999099960000039990999600000399909996000003999067971000039990024776666784300003999998300000027999960000",
+        ],
+        [
+          "5",
+          "03799999999940689999999999739999866666642099994000000000999930000000003799300000000003686333331000000499999930000002799999620000002333479730000000000179600233100000696006993000017960024776666774200002899999300000006999972000",
+        ],
+        [
+          "6",
+          "00027999994000000599999960000368766667863067993000016960999930000015309999300000000099995333331000999999999950009999999999720099997533468730999820000069709996000000699067982000006970024876666674200004899999500000006999972000",
+        ],
+        [
+          "3",
+          "00049999972000001799999940003478666667852099940000039960345100000399900000000003996000000133358630000003999960000000039999720000000133369620000000000399603331000003999067930000039960025666666784200006999998300000049999960000",
+        ],
+        [
+          "0",
+          "00049999972000000699999940003467666667852099960000039970999500000399909993000003999099930000039990999300000399909993000003999099930000039990999300000399909993000003999067940000039960025766666784200005999998300000039999960000",
+        ],
+        [
+          "2",
+          "00037999973000001799999960003479766667863099961000028960345100000069900000000000696000000000247630000000027960000000002797300000000279830000000004973000000001576300000000169710000000336999766666306799999999994004999999999940",
+        ],
+      ];
+      const GW = 14,
+        GH = 16;
+      function inkComponents(ink, W, H) {
+        const seen = new Uint8Array(W * H),
+          comps = [],
+          stack = [];
+        for (let s = 0; s < W * H; s++) {
+          if (!ink[s] || seen[s]) continue;
+          let x0 = W,
+            y0 = H,
+            x1 = 0,
+            y1 = 0;
+          const pts = [];
+          seen[s] = 1;
+          stack.push(s);
+          while (stack.length) {
+            const p = stack.pop(),
+              px = p % W,
+              py = (p - px) / W;
+            pts.push(p);
+            if (px < x0) x0 = px;
+            if (px > x1) x1 = px;
+            if (py < y0) y0 = py;
+            if (py > y1) y1 = py;
+            if (px > 0 && ink[p - 1] && !seen[p - 1]) {
+              seen[p - 1] = 1;
+              stack.push(p - 1);
+            }
+            if (px < W - 1 && ink[p + 1] && !seen[p + 1]) {
+              seen[p + 1] = 1;
+              stack.push(p + 1);
+            }
+            if (py > 0 && ink[p - W] && !seen[p - W]) {
+              seen[p - W] = 1;
+              stack.push(p - W);
+            }
+            if (py < H - 1 && ink[p + W] && !seen[p + W]) {
+              seen[p + W] = 1;
+              stack.push(p + W);
+            }
+          }
+          comps.push({ x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1, pts });
+        }
+        return comps;
+      }
+      function glyphGrid(c, W) {
+        const s = GH / c.h,
+          tw = c.w * s,
+          ox = (GW - tw) / 2,
+          set = new Set(c.pts),
+          g = new Array(GW * GH);
+        for (let gy = 0; gy < GH; gy++)
+          for (let gx = 0; gx < GW; gx++) {
+            const sx0 = (gx - ox) / s,
+              sx1 = (gx + 1 - ox) / s,
+              sy0 = gy / s,
+              sy1 = (gy + 1) / s;
+            let cnt = 0,
+              tot = 0;
+            for (let yy = Math.trunc(sy0); yy <= Math.trunc(sy1); yy++)
+              for (let xx = Math.trunc(sx0); xx <= Math.trunc(sx1); xx++) {
+                if (xx >= 0 && xx < c.w && yy >= 0 && yy < c.h) {
+                  tot++;
+                  if (set.has((c.y0 + yy) * W + c.x0 + xx)) cnt++;
+                }
+              }
+            g[gy * GW + gx] = tot ? cnt / tot : 0;
+          }
+        return g;
+      }
+      const GLYPH_GRIDS = GLYPHS.map(([l, s]) => [l, Array.from(s, (ch) => +ch / 9)]);
+      function classifyGlyph(g) {
+        let best = 1e9,
+          second = 1e9,
+          lab = "?",
+          secondLab = "?";
+        for (const [l, t] of GLYPH_GRIDS) {
+          let d = 0;
+          for (let i = 0; i < g.length; i++) d += Math.abs(g[i] - t[i]);
+          if (d < best) {
+            if (l !== lab) {
+              second = best;
+              secondLab = lab;
+            }
+            best = d;
+            lab = l;
+          } else if (d < second && l !== lab) {
+            second = d;
+            secondLab = l;
+          }
+        }
+        return { lab, d: best, d2: second };
+      }
+      /* ink: 1 where the text is, W x H. Returns {pct, abs, digits} or null when the picture does not look like "EXP 1,234 [5.67%]" */
+      function readExpGlyphs(ink, W, H) {
+        const all = inkComponents(ink, W, H).filter((c) => c.w < W * 0.4 && c.h >= 3);
+        const hs = all
+          .filter((c) => c.h > H * 0.08)
+          .map((c) => c.h)
+          .sort((a, b) => a - b);
+        if (hs.length < 6) return null;
+        const med = hs[hs.length >> 1];
+        const inside = (a, b) => a !== b && a.x0 >= b.x0 && a.x1 <= b.x1 && a.y0 >= b.y0 && a.y1 <= b.y1;
+        const cs = all.filter((c) => !all.some((o) => inside(c, o))).sort((a, b) => a.x0 - b.x0);
+        const digits = [],
+          seps = [];
+        let pctSign = null;
+        for (const c of cs) {
+          if (c.h >= med * 0.85 && c.h <= med * 1.15 && c.w <= 0.85 * c.h) digits.push(c);
+          else if (c.h >= med * 0.85 && c.h <= med * 1.15 && c.w > 0.85 * c.h && c.w < 1.4 * c.h) pctSign = c;
+        }
+        if (digits.length < 3 || digits.length > 12) return null;
+        const yMid = digits.reduce((a, c) => a + (c.y0 + c.y1) / 2, 0) / digits.length;
+        for (const c of cs) if (c.h <= med * 0.45 && (c.y0 + c.y1) / 2 > yMid) seps.push(c);
+        const limit = pctSign ? pctSign.x0 : Infinity;
+        const dps = seps.filter(
+          (c) => c.x0 < limit && digits.some((d) => d.x0 > c.x1 && d.x0 < limit) && digits.some((d) => d.x1 < c.x0),
+        );
+        if (!dps.length) return null;
+        const dp = dps[dps.length - 1];
+        const dec = digits.filter((d) => d.x0 > dp.x1 && d.x0 < limit),
+          left = digits.filter((d) => d.x1 < dp.x0);
+        if (dec.length < 1 || dec.length > 2 || left.length < 1) return null;
+        const ints = [left[left.length - 1]];
+        for (let i = left.length - 2; i >= 0 && ints.length < 2; i--) {
+          const gap = ints[0].x0 - left[i].x1;
+          if (gap > med * 0.5 || seps.some((s) => s.x0 > left[i].x1 && s.x1 < ints[0].x0)) break;
+          ints.unshift(left[i]);
+        }
+        const absD = left.slice(0, left.length - ints.length);
+        const read = (list) => list.map((c) => classifyGlyph(glyphGrid(c, W)));
+        const rI = read(ints),
+          rD = read(dec),
+          rA = read(absD);
+        const all3 = rI.concat(rD, rA);
+        if (all3.some((r) => r.lab === "?")) return null;
+        const pct = parseFloat(rI.map((r) => r.lab).join("") + "." + rD.map((r) => r.lab).join(""));
+        const abs = absD.length ? parseInt(rA.map((r) => r.lab).join(""), 10) : 0;
+        const worst = Math.max(...all3.map((r) => r.d)),
+          tight = Math.min(...all3.map((r) => r.d2 - r.d));
+        return {
+          pct,
+          abs,
+          worst,
+          tight,
+          text:
+            (rA.map((r) => r.lab).join("") || "-") +
+            " " +
+            rI.map((r) => r.lab).join("") +
+            "." +
+            rD.map((r) => r.lab).join(""),
+        };
+      }
+      function readExpCanvas(c) {
+        const W = c.width,
+          H = c.height,
+          d = c.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, W, H).data,
+          ink = new Uint8Array(W * H);
+        for (let i = 0; i < W * H; i++) ink[i] = d[i * 4] === 0 ? 1 : 0;
+        try {
+          return readExpGlyphs(ink, W, H);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      /* Use the digit-shape reading when it is sure of itself AND does not contradict the text reader (a digit it could not find would give a shorter number). */
+      function useGlyphs(gl, ex) {
+        if (!gl || gl.tight < 6 || gl.worst >= 40 || !(gl.pct >= 0 && gl.pct < 100)) return false;
+        if (!ex) return true;
+        if (String(gl.abs).length === String(ex.abs || 0).length) return true;
+        seedReq();
+        return !!S.reqEst && checkPct(gl.pct, gl.abs) === gl.pct; // different length: only if the EXP number and percent still agree with the level size
+      }
+      function parseExp(t) {
+        // "EXP 76,773 [70.77%]" -> {pct:70.77, abs:76773, opts:[...]}
+        const pct = parsePct(t);
+        if (pct === null) return null;
+        const clean = t.replace(/\s/g, "");
+        const m = clean.match(/(\d[\d,.]*)\[/);
+        const abs = m ? parseInt(m[1].replace(/\D/g, ""), 10) : 0;
+        const first = { pct, abs: abs > 0 ? abs : 0 };
+        // The "[" is often read as a digit 1 ("[6.93%]" -> "16.93%", or "8,513 [" -> "8,5131"). Build the possible readings and let the EXP number decide.
+        const toks = t.trim().split(/\s+/),
+          pi = toks.findIndex((x) => x.indexOf("%") >= 0);
+        const opts = [first];
+        if (pi > 0 && /\d/.test(toks[pi - 1])) {
+          const pTok = toks[pi],
+            aTok = toks[pi - 1].replace(/[^\d,.]/g, "");
+          const num = (x) => {
+            const n = parseInt(x.replace(/\D/g, ""), 10);
+            return n > 0 ? n : 0;
+          };
+          const aList = [num(aTok)];
+          if (aTok.length > 1 && /1$/.test(aTok)) aList.push(num(aTok.slice(0, -1)));
+          // "[2.83%]" is usually read as "12.83%": the "[" turns into a 1. A real 12.83% shows up as "[12.83%]" or "112.83%" (three digits),
+          // so a two-digit percent that starts with 1 and has nothing in front of it is most likely a bracket misread: try the short one first.
+          const pOrig = parsePct(pTok),
+            pre = pTok.slice(0, Math.max(0, pTok.search(/\d/))),
+            intStr = (pTok.match(/(\d+)[.,]\d/) || [])[1] || "";
+          const pList = [pOrig];
+          if (pOrig !== null && !pre && intStr.length === 2 && intStr[0] === "1" && /%./.test(pTok))
+            pList.unshift(parseFloat(pOrig.toFixed(2).slice(1)));
+          opts.length = 0;
+          for (const a of aList) for (const pc of pList) if (pc !== null) opts.push({ pct: pc, abs: a });
+          if (!opts.length) opts.push(first);
+        }
+        if (opts.length === 1) {
+          // the reader glued everything together, like "4,93112.83%]": split on the thousands commas
+          const g = clean.replace(/^[^\d]*/, "").match(/^(\d{1,3}(?:,\d{3})+)(\d*)([.,]\d{1,2})%/);
+          if (g) {
+            const a = parseInt(g[1].replace(/\D/g, ""), 10),
+              full = parseFloat(g[2].slice(-2) + g[3].replace(",", ".")),
+              short =
+                g[2].length === 2 && g[2][0] === "1" && /%./.test(clean)
+                  ? parseFloat(g[2].slice(-1) + g[3].replace(",", "."))
+                  : null;
+            opts.length = 0;
+            if (short !== null) opts.push({ pct: short, abs: a });
+            if (full >= 0 && full < 100) opts.push({ pct: full, abs: a });
+            if (!opts.length) opts.push(first);
+          }
+        }
+        return { pct: opts[0].pct, abs: opts[0].abs, opts };
+      }
+      function parsePct(t) {
+        const m = t.replace(/\s/g, "").match(/\[?(\d{1,2}(?:[.,]\d{1,2})?)%/);
+        if (!m) return null;
+        const v = parseFloat(m[1].replace(",", "."));
+        return v >= 0 && v < 100 ? v : null;
+      }
+
+      let readerReady = false,
+        lastSeen = "",
+        lastOk = 0,
+        readerErr = "";
+      const esc = (s) => s.replace(/[<>&]/g, "");
+
+      let mesoOk = 0,
+        mesoFails = 0,
+        mesoSeen = "";
+      const EXP_CHARS = "0123456789[]%.,EXP ",
+        MESO_CHARS = "0123456789,. ";
+
+      setInterval(async () => {
+        if (!stream || (!roi && !roi2) || !video.videoWidth || busy) return;
+        if (!S.running && (S.acc > 0 || !armed)) return; // paused by you, or discarded
+        busy = true;
+        try {
+          const w = await initOCR();
+          readerReady = true;
+          readerErr = "";
+          if (roi) {
+            await w.setParameters({ tessedit_char_whitelist: EXP_CHARS });
+            const cv = prepROI(roi, "roi");
+            const { data } = await w.recognize(cv);
+            lastSeen = data.text.trim();
+            let ex = parseExp(data.text);
+            const gl = readExpCanvas(cv); // the digits matched by shape: far more exact than the general text reader
+            if (useGlyphs(gl, ex)) {
+              ex = { pct: gl.pct, abs: gl.abs, opts: [{ pct: gl.pct, abs: gl.abs }] };
+              lastSeen = "digits: " + gl.text;
+            } else if (ex && ex.opts.length > 1) {
+              seedReq(); // fall back: pick the reading whose percent and EXP number agree
+              const good = ex.opts.find((o) => checkPct(o.pct, o.abs) === o.pct);
+              if (good) {
+                ex.pct = good.pct;
+                ex.abs = good.abs;
+              }
+            }
+            const v = ex ? ex.pct : null;
+            if (v === null) {
+              ocrFails++;
+              $("ocrState").innerHTML =
+                '<span class="warn">No % found in the EXP box (' +
+                ocrFails +
+                ' tries). Reader saw: "' +
+                esc(lastSeen).slice(0, 40) +
+                '". Redraw the box tighter around the text, including the [ ] and the % sign.</span>';
+            } else {
+              ocrFails = 0;
+              lastOk = Date.now();
+              ensureRunning(); // starts by itself
+              $("ocrState").innerHTML = '<span class="ok">Reading ' + v.toFixed(2) + "%</span>";
+              feed(v, false, ex.abs);
+            }
+          }
+          if (roi2) {
+            await w.setParameters({ tessedit_char_whitelist: MESO_CHARS });
+            $("roi2Label").hidden = false;
+            // the number is the first group like 234,421 inside whatever else the box caught (e.g. the word MESOS)
+            const findNum = (t) => {
+              const m = t.match(/\d{1,3}(?:[,.]\d{3})+|\d+/);
+              return m ? m[0] : null;
+            };
+            let num = null;
+            for (const mode of ["bright", "dark"]) {
+              // light text first (the game's style), then the opposite
+              const { data } = await w.recognize(prepROI(roi2, "roi2", mode));
+              mesoSeen = data.text.trim();
+              num = findNum(mesoSeen);
+              if (num) break;
+            }
+            if (!num) {
+              mesoFails++;
+              $("pRead").innerHTML =
+                '<span class="warn">No number found in the green box. Reader saw "' +
+                esc(mesoSeen).slice(0, 30) +
+                '". Redraw the box tighter around just the digits.</span>';
+            } else {
+              const val = parseInt(num.replace(/\D/g, ""), 10);
+              mesoFails = 0;
+              mesoOk = Date.now();
+              ensureRunning();
+              $("pRead").textContent =
+                'Reader sees "' + mesoSeen.replace(/\s+/g, " ").slice(0, 30) + '" and uses ' + val.toLocaleString();
+              feedMesos(val, false);
+            }
+          }
+        } catch (e) {
+          readerErr = e && e.message ? e.message : "unknown error";
+          $("ocrState").innerHTML =
+            '<span class="warn">The reader could not start: ' +
+            esc(readerErr) +
+            ". It needs internet the first time. You can still use manual readings.</span>";
+          worker = null;
+        }
+        busy = false;
+        render();
+      }, 1500);
+
+      /* ---------- step checklist: shows exactly what is missing ---------- */
+      function drawSteps() {
+        const items = [
+          [!!stream, "Game window shared"],
+          [!!roi, "Box drawn around the EXP text"],
+          [readerReady, "Text reader loaded" + (readerErr ? " (failed: " + esc(readerErr) + ")" : "")],
+          [
+            Date.now() - lastOk < 6000,
+            "Reading the percentage" + (S.last !== null ? " (" + S.last.toFixed(2) + "%)" : ""),
+          ],
+        ];
+        if (roi2)
+          items.push([
+            Date.now() - mesoOk < 8000,
+            "Reading your mesos" +
+              (S.mNow !== null
+                ? " (" + S.mNow.toLocaleString() + ")"
+                : mesoSeen
+                  ? ' (saw "' + esc(mesoSeen).slice(0, 20) + '", redraw the green box tighter)'
+                  : ""),
+          ]);
+        else
+          items.push([
+            false,
+            "Optional: pick Mesos number above and draw a box around your mesos (inventory open) to track profit",
+          ]);
+        $("steps").innerHTML = items
+          .map(([ok, t]) => '<li class="' + (ok ? "ok" : "mut") + '">' + (ok ? "&#10003; " : "&#9675; ") + t + "</li>")
+          .join("");
+      }
+      setInterval(drawSteps, 700);
+      drawSteps();
+
+      const MAPS = [
+        ["1st Accompaniment (1st Stage)", "Hidden Street", "", 0, 0],
+        ["1st Accompaniment (2nd Stage)", "Hidden Street", "", 0, 0],
+        ["1st Accompaniment (3rd Stage)", "Hidden Street", "", 0, 0],
+        ["1st Accompaniment (4th stage)", "Hidden Street", "", 0, 0],
+        ["1st Accompaniment (Bonus)", "Hidden Street", "", 0, 0],
+        ["1st Accompaniment (Exit)", "Hidden Street", "", 0, 0],
+        ["1st Accompaniment (Last Stage)", "Hidden Street", "", 0, 0],
+        ["3-Way Road-Split", "Victoria Island", "Lith Harbor", 0, 0],
+        ["A Hill West of Henesys", "Victoria Island", "Henesys", 4, 7],
+        ["A Look-Out Shed Around the Beach", "Victoria Island", "Florina Beach", 37, 38],
+        ["A Split Road", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["Amherst", "Maple Island", "Amherst", 0, 0],
+        ["Amherst Department Store", "Maple Island", "Amherst", 0, 0],
+        ["Amherst Townstreet", "Maple Island", "Amherst", 0, 0],
+        ["Amherst Weapon Store", "Maple Island", "Amherst", 0, 0],
+        ["An Empty House", "Victoria Island", "Henesys", 0, 0],
+        ["Another Entrance", "Victoria Island", "Sleepywood", 0, 0],
+        ["Another Path", "Victoria Island", "Sleepywood", 40, 40],
+        ["Ant Tunnel For Bowman", "Hidden Street", "Henesys", 35, 35],
+        ["Ant Tunnel I", "Victoria Island", "Sleepywood", 22, 24],
+        ["Ant Tunnel II", "Victoria Island", "Sleepywood", 22, 24],
+        ["Ant Tunnel III", "Victoria Island", "Sleepywood", 22, 24],
+        ["Ant Tunnel IV", "Victoria Island", "Sleepywood", 22, 24],
+        ["Ant Tunnel Park", "Victoria Island", "Sleepywood", 22, 27],
+        ["B1 (Area 1)", "Victoria Island", "Kerning City", 0, 0],
+        ["B1 (Area 2)", "Victoria Island", "Kerning City", 0, 0],
+        ["B1 (Subway Depot)", "Victoria Island", "Kerning City", 0, 0],
+        ["B2 (Area 1)", "Victoria Island", "Kerning City", 0, 0],
+        ["B2 (Area 2)", "Victoria Island", "Kerning City", 0, 0],
+        ["B2 (Subway Depot)", "Victoria Island", "Kerning City", 0, 0],
+        ["B3 (Area 1)", "Victoria Island", "Kerning City", 0, 0],
+        ["B3 (Area 2)", "Victoria Island", "Kerning City", 0, 0],
+        ["B3 (Area 3)", "Victoria Island", "Kerning City", 0, 0],
+        ["B3 (Subway Depot)", "Victoria Island", "Kerning City", 0, 0],
+        ["Beach Hunting Ground", "Victoria Island", "Lith Harbor", 7, 10],
+        ["Before Takeoff (To Orbis)", "Victoria Island", "Ellinia Station", 0, 0],
+        ["Black Map with Mob", "Hidden Street", "", 0, 0],
+        ["Bowman Instructional School", "Victoria Island", "Henesys", 0, 0],
+        ["Caution Falling Down", "Victoria Island", "Kerning City", 4, 12],
+        ["Clang and Lorang", "Victoria Island", "Florina Beach", 38, 49],
+        ["Construction Site North of Kerning City", "Victoria Island", "Kerning City", 0, 0],
+        ["Damp Forest", "Victoria Island", "Sleepywood", 22, 24],
+        ["Damp Tree-Forest", "Victoria Island", "Sleepywood", 22, 24],
+        ["Dangerous Croko I", "Victoria Island", "Kerning City", 0, 0],
+        ["Dangerous Croko II", "Victoria Island", "Kerning City", 0, 0],
+        ["Dangerous Forest", "Maple Island", "Amherst", 1, 8],
+        ["Dangerous Steam", "Victoria Island", "Sleepywood", 20, 24],
+        ["Dangerous Valley", "Victoria Island", "Perion", 25, 32],
+        ["Dangerous Valley II", "Victoria Island", "Perion", 32, 32],
+        ["Dark Cave", "Victoria Island", "Sleepywood", 20, 24],
+        ["Deep Ant Tunnel I", "Victoria Island", "Sleepywood", 22, 35],
+        ["Deep Ant Tunnel II", "Victoria Island", "Sleepywood", 22, 27],
+        ["Deep Forest", "Victoria Island", "Sleepywood", 0, 0],
+        ["Deep Valley I", "Victoria Island", "Perion", 17, 19],
+        ["Deep Valley II", "Victoria Island", "Perion", 17, 19],
+        ["Deep Valley III", "Victoria Island", "Perion", 19, 23],
+        ["Downstairs at the Forest", "Victoria Island", "Ellinia", 37, 37],
+        ["Drake Hunting Ground", "Victoria Island", "Sleepywood", 35, 50],
+        ["Drake's Meal Table", "Victoria Island", "Sleepywood", 0, 0],
+        ["Dungeon, Southern Forest I", "Victoria Island", "Ellinia", 6, 6],
+        ["Dungeon, Southern Forest II", "Victoria Island", "Ellinia", 6, 6],
+        ["Dungeon, Southern Forest III", "Victoria Island", "Ellinia", 14, 15],
+        ["Dungeon, Southern Forest IV", "Victoria Island", "Ellinia", 15, 15],
+        ["East Domain of Perion", "Victoria Island", "Perion", 0, 0],
+        ["East Entrance to Mushroom Town", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["East Rocky Mountain I", "Victoria Island", "Perion", 0, 0],
+        ["East Rocky Mountain II", "Victoria Island", "Perion", 5, 11],
+        ["East Rocky Mountain III", "Victoria Island", "Perion", 11, 17],
+        ["East Rocky Mountain IV", "Victoria Island", "Perion", 17, 23],
+        ["East Rocky Mountain V", "Victoria Island", "Perion", 17, 23],
+        ["East Rocky Mountain VI", "Victoria Island", "Perion", 23, 25],
+        ["East Rocky Mountain VII", "Victoria Island", "Perion", 25, 25],
+        ["Ellinia", "Victoria Island", "", 0, 0],
+        ["Ellinia Department Store", "Victoria Island", "Ellinia", 0, 0],
+        ["Ellinia Station", "Victoria Island", "Ellinia", 0, 0],
+        ["Ellinia Weapon Store", "Victoria Island", "Ellinia", 0, 0],
+        ["Florina Beach", "Victoria Island", "", 0, 0],
+        ["Forest West of Henesys", "Victoria Island", "Henesys", 0, 0],
+        ["Free Market (1)", "Hidden Street", "", 0, 0],
+        ["Free Market (10)", "Hidden Street", "", 0, 0],
+        ["Free Market (11)", "Hidden Street", "", 0, 0],
+        ["Free Market (2)", "Hidden Street", "", 0, 0],
+        ["Free Market (3)", "Hidden Street", "", 0, 0],
+        ["Free Market (4)", "Hidden Street", "", 0, 0],
+        ["Free Market (5)", "Hidden Street", "", 0, 0],
+        ["Free Market (6)", "Hidden Street", "", 0, 0],
+        ["Free Market (7)", "Hidden Street", "", 0, 0],
+        ["Free Market (8)", "Hidden Street", "", 0, 0],
+        ["Free Market (9)", "Hidden Street", "", 0, 0],
+        ["Free Market Entrance", "Hidden Street", "", 0, 0],
+        ["Golem's Temple I", "Victoria Island", "Henesys", 0, 0],
+        ["Golem's Temple II", "Victoria Island", "Henesys", 0, 0],
+        ["Golem's Temple III", "Victoria Island", "Henesys", 0, 0],
+        ["Golem's Temple IV", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys", "Victoria Island", "", 0, 0],
+        ["Henesys Department Store", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Dungeon Entrance", "Victoria Island", "Henesys", 19, 24],
+        ["Henesys Hair Salon", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Hunting Ground I", "Victoria Island", "Henesys", 1, 14],
+        ["Henesys Hunting Ground II", "Victoria Island", "Henesys", 7, 15],
+        ["Henesys Hunting Ground III", "Victoria Island", "Henesys", 8, 15],
+        ["Henesys Market", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Park", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Plastic Surgery", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Skin-Care", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Town Hall", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Townstreet", "Victoria Island", "Henesys", 0, 0],
+        ["Henesys Weapon Store", "Victoria Island", "Henesys", 0, 0],
+        ["Hot Sand", "Victoria Island", "Florina Beach", 46, 49],
+        ["Hunting Ground in the Deep Forest I", "Victoria Island", "Sleepywood", 27, 33],
+        ["Hunting Ground in the Deep Forest II", "Victoria Island", "Sleepywood", 33, 33],
+        ["Hunting Ground Middle of the Forest I", "Maple Island", "Amherst", 1, 4],
+        ["Hunting Ground Middle of the Forest II", "Maple Island", "Amherst", 1, 8],
+        ["In a Small Forest", "Maple Island", "Amherst", 1, 8],
+        ["Kerning City", "Victoria Island", "", 0, 0],
+        ["Kerning City Civic Center", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Construction Site", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Hair Salon", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Middle Forest I", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Middle Forest II", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Middle Forest III", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Pharmacy", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Repair Shop", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning City Self-Defence Item Store", "Victoria Island", "Kerning City", 0, 0],
+        ["Kerning Party Quest", "Victoria Island", "", 0, 0],
+        ["L Forest I", "Victoria Island", "Kerning City", 0, 0],
+        ["L Forest II", "Victoria Island", "Kerning City", 0, 0],
+        ["L Forest III", "Victoria Island", "Kerning City", 0, 0],
+        ["Land of Wild Boar", "Victoria Island", "Perion", 23, 35],
+        ["Line 1 (Area 1)", "Victoria Island", "Kerning City", 0, 0],
+        ["Line 1 (Area 2)", "Victoria Island", "Kerning City", 0, 0],
+        ["Line 1 (Area 3)", "Victoria Island", "Kerning City", 0, 0],
+        ["Line 1 (Area 4)", "Victoria Island", "Kerning City", 0, 0],
+        ["Line 2 (Area 1)", "Victoria Island", "Kerning City", 0, 0],
+        ["Line 2 (Area 2)", "Victoria Island", "Kerning City", 0, 0],
+        ["Line 2 (Area 3)", "Victoria Island", "Kerning City", 0, 0],
+        ["Lith Harbor", "Victoria Island", "Lith Harbor", 0, 0],
+        ["Lith Harbor Armor Shop", "Victoria Island", "Lith Harbor", 0, 0],
+        ["Lith Harbor Department Store", "Victoria Island", "Lith Harbor", 0, 0],
+        ["Lith Harbor Weapon Shop", "Victoria Island", "Lith Harbor", 0, 0],
+        ["Lorang and Clang", "Victoria Island", "Florina Beach", 38, 49],
+        ["Lorang Lorang", "Victoria Island", "Florina Beach", 37, 38],
+        ["Lorang Lorang Lorang", "Victoria Island", "Florina Beach", 38, 38],
+        ["Magic Library", "Victoria Island", "Ellinia", 0, 0],
+        ["Magician's Tree Dungeon", "Hidden Street", "Ellinia", 0, 0],
+        ["Marr's Forest", "Victoria Island", "Ellinia", 0, 0],
+        ["Monkey Forest I", "Victoria Island", "Ellinia", 37, 41],
+        ["Monkey Forest II", "Victoria Island", "Ellinia", 37, 41],
+        ["Monkey Swamp I", "Victoria Island", "Kerning City", 21, 37],
+        ["Monkey Swamp II", "Victoria Island", "Kerning City", 21, 41],
+        ["Monkey Swamp III", "Victoria Island", "Kerning City", 21, 41],
+        ["Mushroom Garden (Maple Island)", "Maple Island", "Amherst", 1, 8],
+        ["Mushroom Garden (Victoria Island)", "Victoria Island", "Henesys", 3, 8],
+        ["Mushroom Town (Nina)", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["Mushroom Town (Roger)", "Maple Island", "Mushroom Town (Roger)", 0, 0],
+        ["Mushroom Town Townstreet", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["Mushroom Town - West Entrance", "Maple Island", "Mushroom Town - West Entrance", 0, 0],
+        ["Niora Hospital", "Victoria Island", "Kerning City", 0, 0],
+        ["Northern Top of Construction Site", "Victoria Island", "Kerning City", 12, 15],
+        ["Over the Wall", "Victoria Island", "Perion", 5, 23],
+        ["Perion", "Victoria Island", "Perion", 0, 0],
+        ["Perion Department Store", "Victoria Island", "Perion", 0, 0],
+        ["Perion Dungeon Entrance", "Victoria Island", "Perion", 22, 23],
+        ["Perion Street Corner", "Victoria Island", "Perion", 0, 0],
+        ["Perion Weapon Store", "Victoria Island", "Perion", 0, 0],
+        ["Pet-Walking Road", "Victoria Island", "Henesys", 0, 0],
+        ["Pig Park", "Victoria Island", "Henesys", 0, 0],
+        ["Pig Park II", "Victoria Island", "Henesys", 0, 0],
+        ["Regular Sauna", "Victoria Island", "Sleepywood", 0, 0],
+        ["Right Around Lith Harbor", "Victoria Island", "Lith Harbor", 1, 2],
+        ["Rocky Road I", "Victoria Island", "Perion", 0, 0],
+        ["Rocky Road II", "Victoria Island", "Perion", 0, 0],
+        ["Rocky Road III", "Victoria Island", "Perion", 0, 0],
+        ["Sanctuary Entrance I", "Victoria Island", "Sleepywood", 40, 70],
+        ["Sanctuary Entrance II", "Victoria Island", "Sleepywood", 40, 70],
+        ["Sanctuary Entrance III", "Victoria Island", "Sleepywood", 40, 75],
+        ["Sanctuary Entrance IV", "Victoria Island", "Sleepywood", 40, 75],
+        ["Sleepy Dungeon I", "Victoria Island", "Sleepywood", 37, 37],
+        ["Sleepy Dungeon II", "Victoria Island", "Sleepywood", 41, 41],
+        ["Sleepy Dungeon III", "Victoria Island", "Sleepywood", 40, 40],
+        ["Sleepy Dungeon IV", "Victoria Island", "Sleepywood", 56, 58],
+        ["Sleepy Dungeon V", "Victoria Island", "Sleepywood", 56, 58],
+        ["Sleepywood", "Victoria Island", "Sleepywood", 0, 0],
+        ["Sleepywood Hotel", "Victoria Island", "Sleepywood", 0, 0],
+        ["Snail Field of Flowers", "Maple Island", "Amherst", 1, 6],
+        ["Snail Garden", "Maple Island", "Amherst", 1, 4],
+        ["Snail Hunting Ground I", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["Snail Hunting Ground II", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["Snail Hunting Ground III", "Maple Island", "Mushroom Town (Nina)", 0, 0],
+        ["Someone Else's House", "Victoria Island", "Henesys", 0, 0],
+        ["Southperry", "Maple Island", "Southperry", 0, 0],
+        ["Southperry Armor Store", "Maple Island", "Southperry", 0, 0],
+        ["Subway Ticketing Booth", "Victoria Island", "Kerning City", 6, 8],
+        ["Sunset Sky", "Victoria Island", "Kerning City", 4, 8],
+        ["Swampy Land in a Deep Forest", "Victoria Island", "Sleepywood", 27, 27],
+        ["The Blue Mushroom Forest", "Victoria Island", "Henesys", 19, 22],
+        ["The Breathing Rock", "Victoria Island", "Henesys", 19, 56],
+        ["The Burnt Land I", "Victoria Island", "Perion", 25, 32],
+        ["The Burnt Land II", "Victoria Island", "Perion", 32, 42],
+        ["The Burnt Land III", "Victoria Island", "Perion", 28, 45],
+        ["The Burnt Land IV", "Victoria Island", "Perion", 28, 45],
+        ["The Burnt Land V", "Victoria Island", "Perion", 45, 45],
+        ["The Cave of Evil Eye I", "Victoria Island", "Sleepywood", 27, 35],
+        ["The Cave of Evil Eye II", "Victoria Island", "Sleepywood", 27, 35],
+        ["The Cave of Evil Eye III", "Victoria Island", "Sleepywood", 27, 35],
+        ["The Cave of Evil Eye IV", "Victoria Island", "Sleepywood", 27, 35],
+        ["The Cursed Sanctuary", "Victoria Island", "Sleepywood", 80, 80],
+        ["The Deep Forest of Patience (Step 1)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Deep Forest of Patience (Step 2)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Deep Forest of Patience (Step 3)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Deep Forest of Patience (Step 4)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Deep Forest of Patience (Step 5)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Deep Forest of Patience (Step 6)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Deep Forest of Patience (Step 7)", "Victoria Island", "Sleepywood", 0, 0],
+        ["The Entrance of Golem's Temple", "Victoria Island", "Henesys", 0, 0],
+        ["The Field East of Amherst", "Maple Island", "Amherst", 0, 0],
+        ["The Field South of Ellinia", "Victoria Island", "Ellinia", 5, 14],
+        ["The Field Up North of Ellinia", "Victoria Island", "Ellinia", 0, 0],
+        ["The Field West of Amherst", "Maple Island", "Amherst", 1, 8],
+        ["The Forest East of Henesys", "Victoria Island", "Henesys", 0, 0],
+        ["The Forest North of Ellinia", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest of Evil I", "Victoria Island", "Ellinia", 41, 55],
+        ["The Forest of Evil II", "Victoria Island", "Ellinia", 41, 55],
+        ["The Forest of Patience (Step 1)", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest of Patience (Step 2)", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest of Patience (Step 3)", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest of Patience (Step 4)", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest of Patience (Step 5)", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest of Wisdom", "Victoria Island", "Ellinia", 0, 0],
+        ["The Forest South of Ellinia", "Victoria Island", "Ellinia", 0, 0],
+        ["The Grave of Mushmom", "Victoria Island", "", 24, 50],
+        ["The Hill East of Henesys", "Victoria Island", "Henesys", 0, 0],
+        ["The Land of Wild Boar II", "Victoria Island", "Perion", 23, 25],
+        ["The Pig Beach", "Victoria Island", "Lith Harbor", 2, 28],
+        ["The Rain-Forest East of Henesys", "Victoria Island", "Henesys", 0, 0],
+        ["The Resting Spot, Pig Park", "Victoria Island", "Henesys", 0, 0],
+        ["The Road to the Dungeon", "Victoria Island", "Henesys", 19, 22],
+        ["The Swamp of Despair I", "Victoria Island", "Kerning City", 21, 31],
+        ["The Swamp of Despair II", "Victoria Island", "Kerning City", 6, 31],
+        ["The Swamp of Despair III", "Victoria Island", "Kerning City", 21, 31],
+        ["The Tree That Grew I", "Victoria Island", "Ellinia", 0, 0],
+        ["The Tree That Grew II", "Victoria Island", "Ellinia", 6, 11],
+        ["The Tree That Grew III", "Victoria Island", "Ellinia", 5, 14],
+        ["The Tree Tunnel At the Forest Up North", "Victoria Island", "Ellinia", 0, 0],
+        ["The Tunnel That Lost Light I", "Victoria Island", "Sleepywood", 45, 50],
+        ["The Tunnel That Lost Light II", "Victoria Island", "Sleepywood", 50, 60],
+        ["Thicket Around the Beach I", "Victoria Island", "Lith Harbor", 1, 4],
+        ["Thicket Around the Beach II", "Victoria Island", "Lith Harbor", 2, 4],
+        ["Thicket Around the Beach III", "Victoria Island", "Lith Harbor", 2, 4],
+        ["Thief's Construction Site", "Hidden Street", "Kerning City", 0, 0],
+        ["Thieves' Hideout", "Victoria Island", "Kerning City", 0, 0],
+        ["Tomato Field", "Maple Island", "Amherst", 1, 4],
+        ["Transfer Area", "Victoria Island", "Kerning City", 20, 20],
+        ["Tree Dungeon, Forest Up North I", "Victoria Island", "Ellinia", 6, 6],
+        ["Tree Dungeon, Forest Up North II", "Victoria Island", "Ellinia", 11, 11],
+        ["Tree Dungeon, Forest Up North III", "Victoria Island", "Ellinia", 12, 29],
+        ["Tree Dungeon, Forest Up North IV", "Victoria Island", "Ellinia", 14, 29],
+        ["Tree Dungeon, Forest Up North IX", "Victoria Island", "Ellinia", 33, 33],
+        ["Tree Dungeon, Forest Up North V", "Victoria Island", "Ellinia", 15, 15],
+        ["Tree Dungeon, Forest Up North VI", "Victoria Island", "Ellinia", 17, 17],
+        ["Tree Dungeon, Forest Up North VII", "Victoria Island", "Ellinia", 22, 22],
+        ["Tree Dungeon, Forest Up North VIII", "Victoria Island", "Ellinia", 0, 0],
+        ["Tree Dungeon, Monkey Forest I", "Victoria Island", "Ellinia", 37, 37],
+        ["Tree Dungeon, Monkey Forest II", "Victoria Island", "Ellinia", 41, 41],
+        ["Truth Booth", "Hidden Street", "Truth Booth", 0, 0],
+        ["Utah's Pig Farm", "Victoria Island", "Henesys", 0, 0],
+        ["Victoria Road", "Hidden Street", "Henesys", 0, 0],
+        ["VIP Sauna", "Victoria Island", "Sleepywood", 0, 0],
+        ["Warrior's Rocky Mountain", "Hidden Street", "Perion", 0, 0],
+        ["Warriors' Sanctuary", "Victoria Island", "Perion", 0, 0],
+        ["West Domain of Perion", "Victoria Island", "Perion", 0, 0],
+        ["West Rocky Mountain I", "Victoria Island", "Perion", 0, 0],
+        ["West Rocky Mountain II", "Victoria Island", "Perion", 0, 0],
+        ["West Rocky Mountain III", "Victoria Island", "Perion", 0, 0],
+        ["West Rocky Mountain IV", "Victoria Island", "Perion", 0, 0],
+        ["West Street Corner of Perion", "Victoria Island", "Perion", 0, 0],
+        ["White Map", "Hidden Street", "", 0, 0],
+        ["White Map with Mob", "Hidden Street", "", 0, 0],
+        ["Wild Kargo's Area", "Victoria Island", "Sleepywood", 0, 0],
+      ];
+      /* ---------- map dropdown: search the real map list, or type your own spot name ---------- */
+      const MAPLIST = MAPS.map((m, i) => ({
+        i,
+        name: m[0],
+        region: m[1],
+        town: m[2],
+        lo: m[3],
+        hi: m[4],
+        hay: (m[0] + " " + m[2] + " " + m[1]).toLowerCase(),
+      }));
+      const mapInp = $("mapName"),
+        mapBox = $("mapList");
+      let mapShown = [],
+        mapAct = -1;
+      const recentMaps = () => store.get("recentMaps", []);
+      function pushRecent(name) {
+        if (!name) return;
+        const l = recentMaps().filter((n) => n !== name);
+        l.unshift(name);
+        store.set("recentMaps", l.slice(0, 6));
+      }
+      const lvText = (m) => (m.lo ? "lv " + m.lo + (m.hi > m.lo ? "-" + m.hi : "") : "");
+      const mapByName = (n) => MAPLIST.find((m) => m.name.toLowerCase() === (n || "").trim().toLowerCase());
+      function showMapInfo() {
+        const m = mapByName(mapInp.value);
+        $("mapAuto").textContent = m
+          ? [m.town, m.region].filter(Boolean).join(", ") +
+            (m.lo ? " · level " + m.lo + (m.hi > m.lo ? "-" + m.hi : "") : "")
+          : "";
+      }
+      function addOpt(m, idx, sel) {
+        const d = document.createElement("div");
+        d.className = "opt" + (sel ? " sel" : "");
+        d.id = "mapopt" + idx;
+        d.setAttribute("role", "option");
+        d.dataset.i = m.i;
+        d.dataset.pos = idx;
+        const a = document.createElement("span");
+        a.className = "on";
+        a.textContent = m.name;
+        const b = document.createElement("span");
+        b.className = "os";
+        b.textContent = [m.town, m.region].filter(Boolean).join(" · ");
+        d.append(a, b);
+        if (lvText(m)) {
+          const c = document.createElement("span");
+          c.className = "ol";
+          c.textContent = lvText(m);
+          d.append(c);
+        }
+        mapBox.appendChild(d);
+      }
+      function grp(t) {
+        const g = document.createElement("div");
+        g.className = "grp";
+        g.textContent = t;
+        mapBox.appendChild(g);
+      }
+      function buildMapList(typing) {
+        const q = mapInp.value.trim().toLowerCase(),
+          terms = q.split(/\s+/).filter(Boolean);
+        mapBox.innerHTML = "";
+        mapShown = [];
+        mapAct = -1;
+        const add = (m, sel) => {
+          mapShown.push(m);
+          addOpt(m, mapShown.length - 1, sel);
+        };
+        const exact = !typing && mapByName(mapInp.value); // opening on a map you already picked: show the whole list; typing always filters
+        if (!terms.length || exact) {
+          // nothing typed (or a map already picked): show everything, grouped by town
+          const rec = recentMaps().map(mapByName).filter(Boolean);
+          if (rec.length) {
+            grp("Recent");
+            rec.forEach((m) => add(m, m.name.toLowerCase() === q));
+          }
+          const groups = {};
+          MAPLIST.forEach((m) => {
+            const g = m.town || m.region || "Other";
+            (groups[g] = groups[g] || []).push(m);
+          });
+          Object.keys(groups)
+            .sort()
+            .forEach((g) => {
+              grp(g);
+              groups[g]
+                .sort((a, b) => (a.lo || 999) - (b.lo || 999) || a.name.localeCompare(b.name))
+                .forEach((m) => add(m, m.name.toLowerCase() === q));
+            });
+        } else {
+          const nm = (m) => m.name.toLowerCase();
+          const hits = MAPLIST.filter((m) => terms.every((t) => m.hay.includes(t)))
+            .sort(
+              (a, b) =>
+                nm(b).startsWith(terms[0]) - nm(a).startsWith(terms[0]) ||
+                nm(b).includes(q) - nm(a).includes(q) ||
+                a.name.localeCompare(b.name),
+            )
+            .slice(0, 60);
+          if (!hits.length) {
+            const e = document.createElement("div");
+            e.className = "combo-empty";
+            e.textContent =
+              'No map named "' + mapInp.value.trim() + '" in the list. It will be kept as your own spot name.';
+            mapBox.appendChild(e);
+          } else {
+            grp(hits.length + (hits.length === 1 ? " match" : " matches"));
+            hits.forEach((m) => add(m, false));
+            setAct(0, false);
+          }
+        }
+      }
+      function setAct(n, scroll) {
+        mapBox.querySelectorAll(".opt.act").forEach((e) => e.classList.remove("act"));
+        mapAct = n;
+        const el = n >= 0 ? $("mapopt" + n) : null;
+        if (el) {
+          el.classList.add("act");
+          mapInp.setAttribute("aria-activedescendant", el.id);
+          if (scroll) el.scrollIntoView({ block: "nearest" });
+        }
+      }
+      function openMaps(typing) {
+        buildMapList(typing === true);
+        mapBox.hidden = false;
+        mapInp.setAttribute("aria-expanded", "true");
+        if (mapAct < 0) {
+          const s = mapBox.querySelector(".opt.sel");
+          if (s) mapBox.scrollTop = Math.max(0, s.offsetTop - 120);
+        }
+      }
+      function closeMaps() {
+        mapBox.hidden = true;
+        mapInp.setAttribute("aria-expanded", "false");
+      }
+      function pickMap(m) {
+        mapInp.value = m.name;
+        store.set("map", m.name);
+        pushRecent(m.name);
+        showMapInfo();
+        closeMaps();
+      }
+      mapInp.addEventListener("focus", () => openMaps());
+      mapInp.addEventListener("input", () => {
+        store.set("map", mapInp.value);
+        showMapInfo();
+        openMaps(true);
+      });
+      mapInp.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (mapBox.hidden) openMaps();
+          if (!mapShown.length) return;
+          setAct(
+            e.key === "ArrowDown" ? (mapAct + 1) % mapShown.length : (mapAct - 1 + mapShown.length) % mapShown.length,
+            true,
+          );
+        } else if (e.key === "Enter") {
+          if (!mapBox.hidden && mapAct >= 0) {
+            e.preventDefault();
+            pickMap(mapShown[mapAct]);
+          } else closeMaps();
+        } else if (e.key === "Escape" || e.key === "Tab") {
+          closeMaps();
+        }
+      });
+      mapBox.addEventListener("mousedown", (e) => {
+        e.preventDefault(); // keep the text box focused
+        const o = e.target.closest(".opt");
+        if (o) pickMap(MAPLIST[+o.dataset.i]);
+      });
+      mapBox.addEventListener("mousemove", (e) => {
+        const o = e.target.closest(".opt");
+        if (o && +o.dataset.pos !== mapAct) setAct(+o.dataset.pos, false);
+      });
+      $("mapToggle").addEventListener("click", () => {
+        if (mapBox.hidden) {
+          mapInp.focus();
+          openMaps();
+        } else closeMaps();
+      });
+      document.addEventListener("mousedown", (e) => {
+        if (!e.target.closest(".combo")) closeMaps();
+      });
+      $("save").addEventListener("click", () => {
+        const v = mapInp.value.trim();
+        if (v) pushRecent(v);
+      });
+      showMapInfo();
+
+      render();
+    </script>
+    <script>
+      /* header status: follows the Start/Pause button */
+      setInterval(() => {
+        const t = document.getElementById("start").textContent,
+          d = document.getElementById("dot"),
+          w = document.getElementById("stateWord");
+        const live = t === "Pause",
+          paused = t === "Resume";
+        w.textContent = live ? "Tracking" : paused ? "Paused" : "Ready";
+        d.className = "dot" + (live ? " live" : paused ? " paused" : "");
+      }, 500);
+    </script>
+  </body>
+</html>
