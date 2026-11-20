@@ -238,6 +238,48 @@
       #ocrState {
         color: var(--ink);
       }
+      .invNote {
+        margin-top: 10px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+      .invNote.remind {
+        background: #fff1c2;
+        color: #7a4b00;
+      }
+      .invNote.got {
+        background: #e3f6dc;
+        color: #1f6b1f;
+      }
+      #mAge.inv-open {
+        color: var(--gain);
+        font-weight: 600;
+      }
+      #mAge.inv-closed {
+        color: var(--mut);
+        font-weight: 600;
+      }
+      #mAge.inv-unset {
+        color: var(--bad);
+        font-weight: 600;
+      }
+      #askLvl {
+        width: 64px;
+        padding: 3px 8px;
+        display: inline-block;
+      }
+      #askLvl.empty {
+        border-color: var(--bad);
+      }
+      #startAsk:not([hidden]),
+      #rescanRow:not([hidden]) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
       #log {
         color: var(--mut);
         font-size: 13px;
@@ -699,6 +741,24 @@
 
       <div class="notice">
         <span id="ocrState">Reader idle. Share your game window below to begin.</span> <span id="log"></span>
+        <div id="startAsk" hidden>
+          <span
+            ><span id="askLbl">Starting point:</span> EXP <b id="askVal"></b
+            ><span id="askMWrap">, mesos <b id="askM"></b></span
+            ><span id="askLvlWrap"
+              >, level <input id="askLvl" inputmode="numeric" placeholder="?" aria-label="Your level" /></span
+            >. Is this right now?</span
+          >
+          <button id="askYes" class="pill green">Yes, start</button>
+          <button id="askNo" class="pill ghost">No, read again</button>
+        </div>
+        <div id="invNote" class="invNote" hidden></div>
+        <div id="rescanRow" hidden>
+          <button id="rescan" class="pill yellow">Rescan now</button>
+          <span class="mut"
+            >Reads your EXP again and asks you before using it. It also fixes itself if the reading stays steady.</span
+          >
+        </div>
       </div>
 
       <div class="info">
@@ -783,6 +843,7 @@
           <div class="lab">👛 Mesos now</div>
           <div class="val" id="pNow">--</div>
           <div class="sub" id="startMesos">Started with: --</div>
+          <div class="sub" id="mAge"></div>
           <div class="sub">manual adds: <span id="pExtra">0</span></div>
         </div>
       </div>
@@ -1027,6 +1088,28 @@
         };
       }
       S = fresh();
+
+      /* Timers on a hidden page get slowed to about once a minute, which freezes the readings.
+         Timers inside a Worker keep their pace, so the Worker sends the ticks. */
+      const bgFns = [];
+      let bgWorker = null;
+      function bgFallback() {
+        bgWorker = null;
+        bgFns.forEach((t) => setInterval(t.fn, t.ms));
+      }
+      try {
+        const src = "onmessage = (e) => setInterval(() => postMessage(e.data.id), e.data.ms);";
+        bgWorker = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+        bgWorker.onmessage = (e) => bgFns[e.data].fn();
+        bgWorker.onerror = bgFallback;
+      } catch (e) {
+        bgWorker = null;
+      }
+      function everyMs(ms, fn) {
+        bgFns.push({ ms, fn });
+        if (bgWorker) bgWorker.postMessage({ id: bgFns.length - 1, ms });
+        else setInterval(fn, ms);
+      }
       let armed = false; // the session only starts when you press Start
       const OCR_CONFIRM = 2; // a changed reading must be seen this many times in a row
 
@@ -1035,13 +1118,23 @@
       }
 
       /* The EXP number (like 103,851) and the percent must agree. That lets us fix a misread percent and measure gains in real EXP, so level-ups do not distort the averages. */
+      /* A level size that no real level has (like 3 EXP at level 41) means the EXP number was misread. */
+      function sizeOk(size, L) {
+        if (L === undefined) L = parseInt($("lvl").value, 10) || 0;
+        return size >= 15 && !(L >= 20 && size < 1000);
+      }
+      // an EXP number that does not fit the percent is treated as unread (0), so it can not mislead the checks
+      function cleanAbs(pct, abs) {
+        if (!abs || !(pct >= 0.5)) return abs || 0; // right after a level-up the number is tiny: can not judge it
+        return sizeOk((abs / pct) * 100) ? abs : 0;
+      }
       function refReq() {
         // the best idea of how big a level is: the previous level, or the nearest level we learned
         if (S.prevReq) return { lo: S.prevReq * 0.7, hi: S.prevReq * 2.5 };
         if (S.noSeed) return null;
         const t = store.get("reqByLevel", {}),
           L = parseInt($("lvl").value, 10) || 0,
-          ks = Object.keys(t);
+          ks = Object.keys(t).filter((k) => sizeOk(t[k], +k)); // skip sizes saved from a misread
         if (!ks.length) return null;
         ks.sort((a, b) => Math.abs(a - L) - Math.abs(b - L));
         return { lo: t[ks[0]] * 0.5, hi: t[ks[0]] * 2.5 };
@@ -1057,7 +1150,7 @@
           S.reqErr = err;
         }
         const L = parseInt($("lvl").value, 10);
-        if (L && pct >= 20 && !(reqExp() > 0)) {
+        if (L && pct >= 20 && !(reqExp() > 0) && sizeOk((abs / pct) * 100, L)) {
           // 20%+ can not be a bracket misread, so it is safe to remember this level's size
           const t = store.get("reqByLevel", {});
           t[L] = Math.round((abs / pct) * 100);
@@ -1066,7 +1159,7 @@
       }
       function levelSize(L) {
         const t = store.get("reqByLevel", {});
-        return L && t[L] ? t[L] : 0;
+        return L && t[L] && sizeOk(t[L], L) ? t[L] : 0;
       }
       function seedReq() {
         // a known size for this level lets us verify the very first reading
@@ -1126,6 +1219,9 @@
       }
       function feed(pct, manual, abs) {
         if (!S.running) return;
+        // readings that come far apart (the page was slowed down) can not be confirmed twice before the EXP moves again
+        const slow = !manual && S.feedT > 0 && Date.now() - S.feedT > 5000;
+        if (!manual) S.feedT = Date.now();
         if (!manual && abs) {
           seedReq();
           const c = checkPct(pct, abs);
@@ -1165,6 +1261,7 @@
           S.startPct = pct;
           S.startAbs = abs || null;
           S.lvlStart = parseInt($("lvl").value, 10) || null;
+          S.goodT = Date.now();
           noteReq(pct, abs);
           return;
         }
@@ -1175,13 +1272,16 @@
         }
         if (Math.abs(pct - S.last) < 0.005) {
           S.cand = null;
+          S.goodT = Date.now();
           if (abs) S.lastAbs = abs;
           return;
         }
         if (!manual) {
           // guard against misreads
           const jump = Math.abs(pct - S.last);
-          const need = jump > 5 ? 6 : OCR_CONFIRM; // a big change (level-up, death, misread) must stay on screen for several readings
+          // a big change (level-up, death, misread) must stay on screen for several readings.
+          // A slow, small step up where the EXP number rose too is trusted after one reading.
+          const need = jump > 5 ? 6 : slow && abs && S.lastAbs && abs > S.lastAbs && pct > S.last ? 1 : OCR_CONFIRM;
           if (S.cand !== null && Math.abs(S.cand - pct) < 0.005) S.candN++;
           else {
             S.cand = pct;
@@ -1196,7 +1296,8 @@
         if (pct > S.last) gain = pct - S.last;
         else {
           // A drop is only believed if the EXP number next to the percent dropped too (a misread keeps the number the same or garbled)
-          if (!manual && abs && S.lastAbs && abs >= S.lastAbs) {
+          // with no number on this reading it can not be checked: wait for one that has it
+          if (!manual && S.lastAbs && (!abs || abs >= S.lastAbs)) {
             S.cand = null;
             S.candN = 0;
             return;
@@ -1244,6 +1345,7 @@
           }
         }
         S.last = pct;
+        S.goodT = Date.now();
         if (abs) S.lastAbs = abs;
         noteReq(pct, abs);
       }
@@ -1374,13 +1476,20 @@
             : sec + "s";
       };
 
+      /* Gains in real EXP, as % of the level you are on now, only matter after a level-up (1% of one level is not 1% of the next).
+         They lean on a guess of the level size, so use them only after a level-up and only when they roughly agree with the plain % count. */
+      function useNorm() {
+        if (!(S.expOk && S.expGain > 0 && S.reqEst && S.lvls > 0)) return false;
+        const n = (S.expGain / S.reqEst) * 100;
+        return n > S.total * 0.5 && n < S.total * 1.5;
+      }
       function normTotal() {
-        return S.expOk && S.expGain > 0 && S.reqEst ? (S.expGain / S.reqEst) * 100 : S.total;
-      } // gains as % of the level you are on now
+        return useNorm() ? (S.expGain / S.reqEst) * 100 : S.total;
+      }
       function render() {
         const ms = elapsedMs();
         $("elapsed").textContent = fmtT(ms);
-        const norm = S.expOk && S.expGain > 0 && S.reqEst;
+        const norm = useNorm();
         setNum("gained", normTotal(), fPct);
         $("startExp").textContent =
           "Started at: " +
@@ -1444,7 +1553,7 @@
               " so far"
             : "";
       }
-      setInterval(render, 1000);
+      everyMs(1000, render);
 
       /* ---------- graphs and daily summary ---------- */
       const CATS = ["Potions", "Return scrolls", "Other"];
@@ -1850,16 +1959,39 @@ body{background:linear-gradient(#bfe6ff,#e9f6ff);font:15px/1.3 "Fredoka","Trebuc
 .btns{display:flex;gap:6px;margin-top:auto}
 button{flex:1;font:600 13px "Fredoka",sans-serif;color:#fff;border:2px solid rgba(0,0,0,.28);border-radius:999px;padding:5px 8px;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.25)}
 #pPause{background:#d9a21b}#pStop{background:#d0443a}
-button:active{transform:translateY(1px)}`;
+button:active{transform:translateY(1px)}
+[hidden]{display:none!important}
+.alert{display:flex;align-items:center;gap:6px;background:#d0443a;color:#fff;border-radius:10px;padding:4px 6px 4px 9px;font:600 12px "Fredoka",sans-serif}
+.alert span{flex:1}
+.alert button{flex:none;background:#d9a21b;padding:2px 10px;font-size:12px}
+.inv{border-radius:10px;padding:4px 9px;font:600 12px "Fredoka",sans-serif}
+.inv.remind{background:#ffd75e;color:#4a3000}.inv.got{background:#e3f6dc;color:#1f6b1f}
+.invst{font:600 11px "Fredoka",sans-serif;color:#7d6552;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.invst.open{color:#2f9e2f}.invst.unset{color:#d0443a}
+.note{background:#e3f6dc;color:#1f6b1f;border-radius:10px;padding:4px 9px;font:600 12px "Fredoka",sans-serif}
+.ask{background:#fff;border:2px solid #2f9e2f;border-radius:10px;padding:6px 8px;font:500 13px "Fredoka",sans-serif;display:flex;flex-direction:column;gap:5px}
+.ask input{width:60px;font:600 13px "Fredoka",sans-serif;border:2px solid #d9b46a;border-radius:8px;padding:2px 6px}
+.ask input.empty{border-color:#d0443a}
+.ask .row{display:flex;gap:6px}
+#pYes{background:#2f9e2f}#pNo{background:#7d6552}`;
       const POP_HTML = `<div class="card">
   <div class="top"><span class="dot" id="pDot"></span><span id="pState">Ready</span><span class="time" id="pTime">0:00:00</span></div>
   <div class="bar"><div class="fill" id="pFill"></div><span id="pPct">--</span></div>
-  <div class="grid">
+  <div class="alert" id="pAlert" hidden><span id="pAlertTxt"></span><button id="pRescan">Rescan</button></div>
+  <div class="note" id="pNote" hidden></div>
+  <div class="inv" id="pInv" hidden></div>
+  <div class="ask" id="pAsk" hidden>
+    <div id="pAskTxt"></div>
+    <div id="pLvlRow">Level <input id="pLvl" inputmode="numeric" placeholder="?" /></div>
+    <div class="row"><button id="pYes">Yes</button><button id="pNo">No, read again</button></div>
+  </div>
+  <div class="grid" id="pGrid">
     <div><div class="l">EXP / hour</div><div class="v"><span id="pRate">--</span> <small id="pUnit"></small></div></div>
     <div><div class="l">Next level</div><div class="v" id="pNext">--</div></div>
     <div><div class="l">Net mesos</div><div class="v" id="pNetv">--</div></div>
     <div><div class="l">Mesos / hour</div><div class="v" id="pMph">--</div></div>
   </div>
+  <div class="invst" id="pInvSt" hidden></div>
   <div class="btns"><button id="pPause">Start</button><button id="pStop">Stop &amp; save</button></div>
 </div>`;
       const POP_MAP = { pPct: "gtext", pRate: "rate", pNext: "tToLevel", pNetv: "pNet", pMph: "pRate" }; // pop-out field -> main tracker number
@@ -1876,6 +2008,13 @@ button:active{transform:translateY(1px)}`;
         doc.body.innerHTML = POP_HTML;
         doc.getElementById("pPause").onclick = () => $("start").click();
         doc.getElementById("pStop").onclick = () => $("stop").click();
+        doc.getElementById("pRescan").onclick = () => $("rescan").click();
+        doc.getElementById("pYes").onclick = () => $("askYes").click();
+        doc.getElementById("pNo").onclick = () => $("askNo").click();
+        doc.getElementById("pLvl").oninput = (e) => {
+          $("askLvl").value = e.target.value;
+          $("askLvl").oninput();
+        };
         const cur = {};
         (function frame() {
           // the pop-out runs its own smooth animation, so it stays smooth even while this tab is hidden
@@ -1895,7 +2034,52 @@ button:active{transform:translateY(1px)}`;
             live = btn === "Pause",
             paused = btn === "Resume";
           g("pUnit").textContent = reqExp() ? "EXP/h" : "%/h";
-          g("pState").textContent = live ? "Tracking" : paused ? "Paused" : "Ready";
+          // problems and questions from the main page, so the game and this window are all you need
+          const stuckOn = !$("rescanRow").hidden;
+          g("pAlert").hidden = !stuckOn;
+          if (stuckOn) {
+            const ms = stuckMs();
+            const txt = rescanning
+              ? "Rescanning..."
+              : "EXP not updating for " + Math.max(1, Math.floor(ms / 60000)) + " min";
+            if (g("pAlertTxt").textContent !== txt) g("pAlertTxt").textContent = txt;
+            g("pRescan").textContent = rescanning ? "Cancel" : "Rescan";
+          }
+          const askOn = !$("startAsk").hidden;
+          g("pAsk").hidden = !askOn;
+          g("pGrid").hidden = askOn; // make room for the question
+          if (askOn) {
+            const txt =
+              $("askLbl").textContent +
+              " " +
+              $("askVal").textContent +
+              ($("askMWrap").hidden ? "" : ", mesos " + $("askM").textContent) +
+              ". Right?";
+            if (g("pAskTxt").textContent !== txt) g("pAskTxt").textContent = txt;
+            g("pLvlRow").hidden = $("askLvlWrap").hidden;
+            if (doc.activeElement !== g("pLvl")) g("pLvl").value = $("askLvl").value;
+            g("pLvl").className = $("askLvl").value.trim() ? "" : "empty";
+            g("pYes").textContent = $("askYes").textContent;
+          }
+          const inv = $("invNote"),
+            invTxt = inv.classList.contains("remind")
+              ? "Open your inventory to update mesos"
+              : inv.classList.contains("got")
+                ? "Got it! You can close your inventory"
+                : "";
+          g("pInv").hidden = inv.hidden || !invTxt;
+          if (g("pInv").textContent !== invTxt) g("pInv").textContent = invTxt;
+          g("pInv").className = "inv " + (inv.classList.contains("remind") ? "remind" : "got");
+          // what the tracker thinks about the inventory, with how long ago mesos was read
+          const ist = invState(),
+            istTxt = $("mAge").textContent;
+          g("pInvSt").hidden = !ist;
+          if (g("pInvSt").textContent !== istTxt) g("pInvSt").textContent = istTxt;
+          g("pInvSt").className = "invst " + (ist || "");
+          const noteOn = !!lastFix && Date.now() - lastFix.t < 30000;
+          g("pNote").hidden = !noteOn;
+          if (noteOn && g("pNote").textContent !== lastFix.msg) g("pNote").textContent = lastFix.msg;
+          g("pState").textContent = live ? "Tracking" : paused ? "Paused" : btn === "Cancel" ? "Waiting" : "Ready";
           g("pDot").className = "dot" + (live ? " live" : paused ? " paused" : "");
           g("pTime").textContent = fmtT(elapsedMs());
           g("pFill").style.width = (S.last === null ? 0 : S.last) + "%";
@@ -1910,9 +2094,9 @@ button:active{transform:translateY(1px)}`;
         }
         try {
           if ("documentPictureInPicture" in window) {
-            pop = await documentPictureInPicture.requestWindow({ width: 300, height: 250 });
+            pop = await documentPictureInPicture.requestWindow({ width: 300, height: 310 });
           } else {
-            pop = window.open("", "grindPop", "width=300,height=270");
+            pop = window.open("", "grindPop", "width=300,height=330");
             if (!pop) {
               $("log").textContent =
                 "The browser blocked the pop-out window. Allow pop-ups for this page and try again.";
@@ -1938,11 +2122,187 @@ button:active{transform:translateY(1px)}`;
       });
 
       /* ---------- buttons ---------- */
+      /* A new session with an EXP box waits for a steady reading that you approve.
+         Starting from a wrong reading (like the picture before the game window is shared) counts the whole bar as gained. */
+      let prop = [],
+        asked = null,
+        mprop = [],
+        askedM = null;
+      const awaitingStart = () => !S.running && S.startPct === null && S.acc === 0 && !!roi;
+      function clearAsk() {
+        prop = [];
+        asked = null;
+        mprop = [];
+        askedM = null;
+        $("startAsk").hidden = true;
+      }
+      function cancelWait() {
+        armed = false;
+        clearAsk();
+        endRescan();
+        $("rescanRow").hidden = true;
+        $("start").textContent = "Start";
+      }
+      function showAsk() {
+        if (!asked) return; // the EXP reading leads; mesos fills in when it is steady
+        $("askLbl").textContent = rescanning ? "Reader sees:" : "Starting point:";
+        $("askYes").textContent = rescanning ? "Yes, use it" : "Yes, start";
+        $("askVal").textContent =
+          asked.pct.toFixed(2) + "%" + (asked.abs ? " (" + asked.abs.toLocaleString() + ")" : "");
+        $("askMWrap").hidden = !roi2 || rescanning;
+        $("askM").textContent = askedM !== null ? askedM.toLocaleString() : "still reading...";
+        // the level is easy to forget: ask for it with the starting point, filled in with the saved one
+        $("askLvlWrap").hidden = rescanning;
+        if ($("startAsk").hidden) $("askLvl").value = $("lvl").value;
+        $("askLvl").classList.toggle("empty", !$("askLvl").value.trim());
+        $("startAsk").hidden = false;
+        $("ocrState").textContent = "Check the starting point below.";
+      }
+      function proposeMesos(v) {
+        if (askedM !== null) return; // keep the value you are checking still
+        mprop.push(v);
+        if (mprop.length > 3) mprop.shift();
+        if (mprop.length === 3 && mprop.every((m) => m === v)) {
+          askedM = v;
+          showAsk();
+        }
+      }
+      function approveStart(pct, abs) {
+        armed = true;
+        S.running = true;
+        S.startT = S.goodT = S.feedT = S.agreeT = Date.now();
+        S.last = S.startPct = pct;
+        S.lastAbs = S.startAbs = abs || null;
+        S.lvlStart = parseInt($("lvl").value, 10) || null;
+        noteReq(pct, abs);
+        if (askedM !== null) {
+          // the approved mesos is the profit starting point
+          S.mStart = S.mNow = askedM;
+          S.mCand = null;
+          S.mCandN = 0;
+          if (!invPic()) saveInvPic();
+        }
+        clearAsk();
+        $("start").textContent = "Pause";
+        $("ocrState").innerHTML = '<span class="ok">Started at ' + pct.toFixed(2) + "%</span>";
+        render();
+      }
+      function propose(pct, abs) {
+        if (asked) return; // keep the value you are checking still
+        prop.push({ pct, abs: abs || 0 });
+        if (prop.length > 3) prop.shift();
+        const steady = prop.length === 3 && prop.every((p) => Math.abs(p.pct - pct) < 0.005 && p.abs === (abs || 0));
+        if (!steady) {
+          $("ocrState").textContent =
+            "Reading " + pct.toFixed(2) + "%. Waiting for a steady reading (" + prop.length + "/3)...";
+          return;
+        }
+        asked = { pct, abs: abs || 0 };
+        showAsk();
+      }
+      $("askLvl").oninput = () => $("askLvl").classList.toggle("empty", !$("askLvl").value.trim());
+      $("askYes").onclick = () => {
+        if (!asked) return;
+        if (rescanning) {
+          recover(asked.pct, asked.abs, "Rescan");
+          clearAsk();
+          endRescan();
+        } else {
+          const L = parseInt($("askLvl").value, 10);
+          if (L > 0) {
+            $("lvl").value = L;
+            store.set("lvl", String(L));
+          }
+          approveStart(asked.pct, asked.abs);
+        }
+      };
+
+      /* ---------- stuck readings: rescan ----------
+         Readings can get stuck when every new one is rejected (a wrong idea of the level size, or a misread taken as the current EXP).
+         "Rescan now" reads again and asks you; the automatic one trusts the screen once it has looked steady for a while. */
+      let rescanning = false,
+        recentReads = [],
+        lastFix = null;
+      function endRescan() {
+        rescanning = false;
+        $("rescan").textContent = "Rescan now";
+      }
+      $("rescan").onclick = () => {
+        clearAsk();
+        if (rescanning) {
+          endRescan();
+          return;
+        }
+        rescanning = true;
+        $("rescan").textContent = "Cancel rescan";
+        $("ocrState").textContent = "Rescanning your EXP. Waiting for a steady reading...";
+      };
+      // the last 5 readings rise or stay the same, together with the EXP number, and stay close: a real, steady reading
+      function steadyReads() {
+        const r = recentReads;
+        if (r.length < 5) return false;
+        const ps = r.map((p) => p.pct);
+        if (Math.max(...ps) - Math.min(...ps) > 1) return false;
+        for (let i = 1; i < r.length; i++) if (r[i].pct < r[i - 1].pct - 0.005 || r[i].abs < r[i - 1].abs) return false;
+        return true;
+      }
+      // how long the screen reading and the bar have disagreed (time before a resume does not count)
+      function stuckMs() {
+        return S.running && S.agreeT ? Date.now() - Math.max(S.agreeT, S.startT) : 0;
+      }
+      function recover(pct, abs, how) {
+        const was = Math.max(S.agreeT || 0, S.startT),
+          mins = Math.max(1, Math.round((Date.now() - was) / 60000));
+        S.cand = null;
+        S.candN = 0;
+        S.rej = S.rejSame = 0;
+        const levelUp = S.last > 70 && pct < 30;
+        if (pct > S.last || levelUp) {
+          feed(pct, true, abs); // a rise is EXP you really gained while it was stuck; a level-up is counted as one
+        } else {
+          S.last = pct; // lower without a level-up: take the screen value, count nothing
+          if (abs) S.lastAbs = abs;
+          S.goodT = Date.now();
+        }
+        // a wrong idea of the level size makes every reading look wrong: learn it again from the screen
+        S.reqEst = S.reqErr = S.prevReq = null;
+        S.noSeed = true;
+        noteReq(pct, abs);
+        S.agreeT = Date.now();
+        recentReads = [];
+        $("rescanRow").hidden = true;
+        $("log").textContent =
+          how + ": the reading was stuck for about " + mins + " min, now at " + pct.toFixed(2) + "%.";
+        lastFix = { t: Date.now(), msg: how + ": now at " + pct.toFixed(2) + "%" }; // shown in the pop-out for a while
+        render();
+      }
+      $("askNo").onclick = () => {
+        clearAsk();
+        $("ocrState").textContent =
+          "Reading again. If it keeps getting it wrong, redraw the EXP or mesos box tighter, or type your EXP % in the manual box.";
+      };
+
       $("start").onclick = () => {
+        if (awaitingStart()) {
+          if (armed)
+            cancelWait(); // pressed again while waiting: cancel
+          else {
+            armed = true;
+            $("start").textContent = "Cancel";
+            $("ocrState").textContent = stream
+              ? "Reading your EXP. Once it reads the same value 3 times in a row, you approve it and the session starts."
+              : "Share your game window below. The session starts once you approve the first reading.";
+          }
+          render();
+          return;
+        }
         armed = true;
         if (S.running) {
           S.acc += Date.now() - S.startT;
           S.running = false;
+          clearAsk();
+          endRescan();
+          $("rescanRow").hidden = true;
           $("start").textContent = "Resume";
         } else {
           S.running = true;
@@ -1954,8 +2314,7 @@ button:active{transform:translateY(1px)}`;
       $("reset").onclick = () => {
         if ((!S.total && !mesoTracked()) || confirm("Clear this session?")) {
           S = fresh();
-          armed = false;
-          $("start").textContent = "Start";
+          cancelWait();
           render();
         }
       };
@@ -1972,7 +2331,7 @@ button:active{transform:translateY(1px)}`;
 
       /* profit buttons */
       function ensureRunning() {
-        if (!S.running && armed) {
+        if (!S.running && armed && !awaitingStart()) {
           S.running = true;
           S.startT = Date.now();
           $("start").textContent = "Pause";
@@ -2029,6 +2388,11 @@ button:active{transform:translateY(1px)}`;
       $("addManual").onclick = () => {
         const v = parseFloat($("manual").value);
         if (isNaN(v) || v < 0 || v >= 100) return;
+        if (awaitingStart()) {
+          approveStart(v, null); // a typed reading is your approved starting point
+          $("manual").value = "";
+          return;
+        }
         if (!S.running) $("start").click();
         feed(v, true);
         $("manual").value = "";
@@ -2137,12 +2501,12 @@ button:active{transform:translateY(1px)}`;
             (mesoTracked() ? ", net " + fmtM(netProfit()) + " mesos" : "") +
             ".";
           S = fresh();
-          armed = false;
-          $("start").textContent = "Start";
+          cancelWait();
           render();
         } else {
           S.acc = Math.max(0, S.acc);
-          $("start").textContent = S.acc > 0 ? "Resume" : "Start";
+          if (S.acc > 0) $("start").textContent = "Resume";
+          else cancelWait();
         }
       };
       $("lvl").value = store.get("lvl", "");
@@ -2231,7 +2595,9 @@ button:active{transform:translateY(1px)}`;
           if (target() === "mesos") {
             roi2 = b;
             store.set("roi2", b);
-            $("ocrState").textContent = "Mesos box saved. It reads together with the EXP bar.";
+            saveInvPic();
+            $("ocrState").textContent =
+              "Mesos box saved. It reads together with the EXP bar. You can close the inventory: the tracker sees when it is open.";
           } else {
             roi = b;
             store.set("roi", b);
@@ -2246,6 +2612,7 @@ button:active{transform:translateY(1px)}`;
         if (t === "mesos") {
           roi2 = null;
           store.set("roi2", null);
+          store.set("invPic", null);
           $("roi2").hidden = $("roi2Label").hidden = true;
         } else {
           roi = null;
@@ -3040,13 +3407,116 @@ button:active{transform:translateY(1px)}`;
         readerErr = "";
       const esc = (s) => s.replace(/[<>&]/g, "");
 
+      /* ---------- is the inventory open? ----------
+         When the inventory is closed, the mesos box sits on the game picture and the reader would "find" numbers there
+         (damage numbers, map details). So we keep a small picture of the inventory frame around the box, taken when the
+         box is drawn, and only read mesos while that frame is on screen. */
+      const ringCv = document.createElement("canvas"),
+        ringCtx = ringCv.getContext("2d", { willReadFrequently: true });
+      function ringPic(r) {
+        // the strip just around the box (the inventory frame), shrunk to 48x16 grey pixels; -1 = inside the box (the digits change)
+        const vw = video.videoWidth,
+          vh = video.videoHeight;
+        if (!vw || !r) return null;
+        const sx = r.x * vw,
+          sy = r.y * vh,
+          sw = r.w * vw,
+          sh = r.h * vh,
+          pad = Math.max(3, sh * 0.35),
+          ox = Math.max(0, sx - pad),
+          oy = Math.max(0, sy - pad),
+          ow = Math.min(vw, sx + sw + pad) - ox,
+          oh = Math.min(vh, sy + sh + pad) - oy;
+        const W = 48,
+          H = 16;
+        ringCv.width = W;
+        ringCv.height = H;
+        ringCtx.drawImage(video, ox, oy, ow, oh, 0, 0, W, H);
+        const d = ringCtx.getImageData(0, 0, W, H).data,
+          out = [];
+        for (let y = 0; y < H; y++)
+          for (let x = 0; x < W; x++) {
+            const vx = ox + ((x + 0.5) / W) * ow,
+              vy = oy + ((y + 0.5) / H) * oh,
+              inside = vx >= sx && vx <= sx + sw && vy >= sy && vy <= sy + sh,
+              i = (y * W + x) * 4;
+            out.push(inside ? -1 : Math.round(d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11));
+          }
+        return out;
+      }
+      const invPic = () => {
+        const p = store.get("invPic", null);
+        return p && p.v === 2 ? p.px : null;
+      };
+      function saveInvPic() {
+        const pic = ringPic(roi2);
+        if (pic) store.set("invPic", { v: 2, px: pic });
+      }
+      function invOpen() {
+        const ref = invPic(),
+          now = ringPic(roi2);
+        if (!ref || !now || ref.length !== now.length) return true; // no saved picture: can not tell, so read as before
+        let same = 0,
+          n = 0;
+        for (let i = 0; i < ref.length; i++)
+          if (ref[i] >= 0 && now[i] >= 0) {
+            if (Math.abs(ref[i] - now[i]) <= 24) same++;
+            n++;
+          }
+        invScore = n < 10 ? null : Math.round((100 * same) / n); // % of the frame that looks like the saved picture
+        return n < 10 || invScore >= INV_LIMIT; // most of the frame looks the same: the inventory is open
+      }
+      const INV_LIMIT = 60; // this % or more of the frame matching counts as "open"
+      let closedRun = 0; // "closed" checks in a row: one odd check (mouse, animation) must not flip it
+      let invScore = null;
+      // what the tracker thinks about the inventory: null (no mesos box), "unset" (no saved picture), "open" or "closed"
+      const invState = () => (!roi2 ? null : !invPic() ? "unset" : invClosed ? "closed" : "open");
+      const invLabel = () => {
+        const st = invState(),
+          sc = invScore !== null ? " (match " + invScore + "%)" : "";
+        if (st === "open") return "🎒 Inventory open" + sc;
+        if (st === "closed") return "🎒 Inventory closed" + sc;
+        if (st === "unset") return "🎒 Inventory: redraw the green box with it open";
+        return "";
+      };
+      const ago = (t) => {
+        const m = Math.floor((Date.now() - t) / 60000);
+        return m < 1 ? "just now" : m + " min ago";
+      };
+      let invClosed = false,
+        gotT = 0;
+      const MESO_REMIND = 10 * 60000;
+      const mesoStale = () =>
+        S.running && !!roi2 && !!invPic() && Date.now() - Math.max(mesoOk, S.startT) > MESO_REMIND;
+      // reminder to open the inventory, "got it" after, and how fresh the mesos number is
+      everyMs(1000, () => {
+        const el = $("invNote");
+        let txt = "",
+          cls = "";
+        if (mesoStale()) {
+          txt =
+            "Open your inventory for a few seconds to update your mesos. (Open but not updating? The inventory moved: redraw the green box.)";
+          cls = "remind";
+        } else if (Date.now() - gotT < 15000) {
+          txt = "Got it! Mesos updated, you can close your inventory.";
+          cls = "got";
+        }
+        el.hidden = !txt;
+        if (el.textContent !== txt) el.textContent = txt;
+        el.className = "invNote " + cls;
+        const age = roi2 && S.mNow !== null && mesoOk ? "updated " + ago(mesoOk) : "",
+          lab = invLabel(),
+          st = invState();
+        $("mAge").textContent = [lab, age].filter(Boolean).join(" · ");
+        $("mAge").className = "sub inv-" + (st || "none");
+      });
       let mesoOk = 0,
         mesoFails = 0,
         mesoSeen = "";
       const EXP_CHARS = "0123456789[]%.,EXP ",
         MESO_CHARS = "0123456789,. ";
 
-      setInterval(async () => {
+      everyMs(1500, async () => {
         if (!stream || (!roi && !roi2) || !video.videoWidth || busy) return;
         if (!S.running && (S.acc > 0 || !armed)) return; // paused by you, or discarded
         busy = true;
@@ -3072,6 +3542,7 @@ button:active{transform:translateY(1px)}`;
                 ex.abs = good.abs;
               }
             }
+            if (ex) ex.abs = cleanAbs(ex.pct, ex.abs);
             const v = ex ? ex.pct : null;
             if (v === null) {
               ocrFails++;
@@ -3084,12 +3555,59 @@ button:active{transform:translateY(1px)}`;
             } else {
               ocrFails = 0;
               lastOk = Date.now();
-              ensureRunning(); // starts by itself
-              $("ocrState").innerHTML = '<span class="ok">Reading ' + v.toFixed(2) + "%</span>";
-              feed(v, false, ex.abs);
+              if (S.startPct === null) {
+                // no approved starting point yet (for example Start was pressed before the EXP box was drawn):
+                // hold the clock and ask first
+                if (S.running) {
+                  S.running = false;
+                  S.acc = 0;
+                  armed = true;
+                  $("start").textContent = "Cancel";
+                }
+                propose(v, ex.abs); // a new session starts only after you approve a steady reading
+              } else if (rescanning) {
+                propose(v, ex.abs); // you asked for a rescan: wait for a steady reading and your OK
+              } else {
+                ensureRunning(); // starts by itself
+                feed(v, false, ex.abs);
+                // stuck = the screen and the bar have disagreed for a while, whatever the reason
+                // (a reading "corrected" into a wrong value counts too, so this does not rely on what feed accepted)
+                if (S.last !== null && Math.abs(v - S.last) < 0.05) S.agreeT = Date.now();
+                let stuck = stuckMs();
+                if (stuck > 0) {
+                  recentReads.push({ pct: v, abs: ex.abs || 0 });
+                  if (recentReads.length > 5) recentReads.shift();
+                } else recentReads = [];
+                if (stuck > 60000 && steadyReads()) {
+                  recover(v, ex.abs, "Fixed by itself");
+                  stuck = 0;
+                }
+                $("rescanRow").hidden = !(stuck > 60000);
+                $("ocrState").innerHTML =
+                  stuck > 60000
+                    ? '<span class="warn">The screen shows ' +
+                      v.toFixed(2) +
+                      "% but the bar is stuck at " +
+                      S.last.toFixed(2) +
+                      "% for " +
+                      Math.floor(stuck / 60000) +
+                      " min. It fixes itself once the reading is steady, or press Rescan now.</span>"
+                    : '<span class="ok">Reading ' + v.toFixed(2) + "%</span>";
+              }
             }
           }
-          if (roi2) {
+          closedRun = roi2 && !invOpen() ? closedRun + 1 : 0;
+          invClosed = closedRun >= 3;
+          if (invClosed) {
+            $("pRead").textContent =
+              "Inventory closed (match " +
+              invScore +
+              "%, open from " +
+              INV_LIMIT +
+              "%). Mesos " +
+              (mesoOk ? "updated " + ago(mesoOk) : "not read yet") +
+              ".";
+          } else if (roi2) {
             await w.setParameters({ tessedit_char_whitelist: MESO_CHARS });
             $("roi2Label").hidden = false;
             // the number is the first group like 234,421 inside whatever else the box caught (e.g. the word MESOS)
@@ -3114,10 +3632,16 @@ button:active{transform:translateY(1px)}`;
             } else {
               const val = parseInt(num.replace(/\D/g, ""), 10);
               mesoFails = 0;
+              if (mesoStale()) gotT = Date.now(); // you opened it after the reminder: tell you it can close again
               mesoOk = Date.now();
+              if (S.startPct === null && !S.running) proposeMesos(val); // waiting for your OK on the starting point
               ensureRunning();
               $("pRead").textContent =
-                'Reader sees "' + mesoSeen.replace(/\s+/g, " ").slice(0, 30) + '" and uses ' + val.toLocaleString();
+                'Reader sees "' +
+                mesoSeen.replace(/\s+/g, " ").slice(0, 30) +
+                '" and uses ' +
+                val.toLocaleString() +
+                (invScore !== null ? " · inventory match " + invScore + "% (open from " + INV_LIMIT + "%)" : "");
               feedMesos(val, false);
             }
           }
@@ -3131,7 +3655,7 @@ button:active{transform:translateY(1px)}`;
         }
         busy = false;
         render();
-      }, 1500);
+      });
 
       /* ---------- step checklist: shows exactly what is missing ---------- */
       function drawSteps() {
@@ -3146,13 +3670,15 @@ button:active{transform:translateY(1px)}`;
         ];
         if (roi2)
           items.push([
-            Date.now() - mesoOk < 8000,
+            Date.now() - mesoOk < 8000 || (invClosed && mesoOk > 0),
             "Reading your mesos" +
-              (S.mNow !== null
-                ? " (" + S.mNow.toLocaleString() + ")"
-                : mesoSeen
-                  ? ' (saw "' + esc(mesoSeen).slice(0, 20) + '", redraw the green box tighter)'
-                  : ""),
+              (invClosed && mesoOk
+                ? " (inventory closed, updated " + ago(mesoOk) + ")"
+                : S.mNow !== null
+                  ? " (" + S.mNow.toLocaleString() + ")"
+                  : mesoSeen
+                    ? ' (saw "' + esc(mesoSeen).slice(0, 20) + '", redraw the green box tighter)'
+                    : ""),
           ]);
         else
           items.push([
@@ -3647,7 +4173,7 @@ button:active{transform:translateY(1px)}`;
           w = document.getElementById("stateWord");
         const live = t === "Pause",
           paused = t === "Resume";
-        w.textContent = live ? "Tracking" : paused ? "Paused" : "Ready";
+        w.textContent = live ? "Tracking" : paused ? "Paused" : t === "Cancel" ? "Waiting" : "Ready";
         d.className = "dot" + (live ? " live" : paused ? " paused" : "");
       }, 500);
     </script>
